@@ -1,15 +1,34 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2013 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/zip_archive_stream.hpp"
 #include "orcus/zip_archive.hpp"
 
 #include <sstream>
-#include <cstring>
 
 #ifdef _WIN32
 #define fseeko _fseeki64
@@ -70,44 +89,4 @@ void zip_archive_stream_fd::seek(size_t pos)
     }
 }
 
-
-zip_archive_stream_blob::zip_archive_stream_blob(const unsigned char* blob, size_t size) :
-    m_blob(blob), m_cur(blob), m_size(size) {}
-
-zip_archive_stream_blob::~zip_archive_stream_blob() {}
-
-size_t zip_archive_stream_blob::size() const
-{
-    return m_size;
 }
-
-size_t zip_archive_stream_blob::tell() const
-{
-    return std::distance(m_blob, m_cur);
-}
-
-void zip_archive_stream_blob::seek(size_t pos)
-{
-    if (pos > m_size)
-    {
-        ostringstream os;
-        os << "failed to seek position to " << pos << ".";
-        throw zip_error(os.str());
-    }
-    m_cur = m_blob + pos;
-}
-
-void zip_archive_stream_blob::read(unsigned char* buffer, size_t length) const
-{
-    if (!length)
-        return;
-    // First, make sure we have enough blob to satisfy the requested stream length.
-    const size_t length_available = m_size - tell();
-    if (length_available < length)
-        throw zip_error("There is not enough stream left to fill requested length.");
-
-    memcpy(buffer, m_cur, length);
-}
-
-}
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

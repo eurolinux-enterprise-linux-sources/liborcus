@@ -1,136 +1,138 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2011 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#include "orcus/spreadsheet/styles.hpp"
-#include "orcus/string_pool.hpp"
+#include "styles.hpp"
 
 #include <algorithm>
-#include <cassert>
 
 namespace orcus { namespace spreadsheet {
 
-font_t::font_t() :
+import_styles::font::font() :
     size(0.0), bold(false),
-    italic(false), underline_style(underline_t::none),
-    underline_width(underline_width_t::none),
-    underline_mode(underline_mode_t::continuos),
-    underline_type(underline_type_t::none),
-    color(),
-    strikethrough_style(strikethrough_style_t::none),
-    strikethrough_width(strikethrough_width_t::unknown),
-    strikethrough_type(strikethrough_type_t::unknown),
-    strikethrough_text(strikethrough_text_t::unknown)
+    italic(false), underline(underline_none)
 {
 }
 
-void font_t::reset()
+void import_styles::font::reset()
 {
-    *this = font_t();
+    *this = font();
 }
 
-color_t::color_t() :
+import_styles::color::color() :
     alpha(0), red(0), green(0), blue(0)
 {
 }
 
-color_t::color_t(color_elem_t _alpha, color_elem_t _red, color_elem_t _green, color_elem_t _blue) :
+import_styles::color::color(color_elem_t _alpha, color_elem_t _red, color_elem_t _green, color_elem_t _blue) :
     alpha(_alpha), red(_red), green(_green), blue(_blue)
 {
 }
 
-void color_t::reset()
+void import_styles::color::reset()
 {
-    *this = color_t();
+    *this = color();
 }
 
-fill_t::fill_t()
-{
-}
-
-void fill_t::reset()
-{
-    *this = fill_t();
-}
-
-border_attrs_t::border_attrs_t():
-    style(orcus::spreadsheet::border_style_t::unknown)
+import_styles::fill::fill()
 {
 }
 
-void border_attrs_t::reset()
+void import_styles::fill::reset()
 {
-    *this = border_attrs_t();
+    *this = fill();
 }
 
-border_t::border_t()
-{
-}
-
-void border_t::reset()
-{
-    *this = border_t();
-}
-
-protection_t::protection_t() :
-    locked(false), hidden(false), print_content(false), formula_hidden(false)
+import_styles::border_attrs::border_attrs()
 {
 }
 
-void protection_t::reset()
+void import_styles::border_attrs::reset()
 {
-    *this = protection_t();
+    *this = border_attrs();
 }
 
-number_format_t::number_format_t() : identifier(0) {}
-
-void number_format_t::reset()
+import_styles::border::border()
 {
-    *this = number_format_t();
 }
 
-bool number_format_t::operator== (const number_format_t& r) const
+void import_styles::border::reset()
 {
-    return format_string == r.format_string;
+    *this = border();
 }
 
-cell_format_t::cell_format_t() :
+import_styles::protection::protection() :
+    locked(false), hidden(false)
+{
+}
+
+void import_styles::protection::reset()
+{
+    *this = protection();
+}
+
+void import_styles::number_format::reset()
+{
+    *this = number_format();
+}
+
+
+import_styles::xf::xf() :
     font(0),
     fill(0),
     border(0),
     protection(0),
     number_format(0),
     style_xf(0),
-    hor_align(hor_alignment_t::unknown),
-    ver_align(ver_alignment_t::unknown),
     apply_num_format(false),
     apply_font(false),
     apply_fill(false),
     apply_border(false),
-    apply_alignment(false),
-    apply_protection(false)
+    apply_alignment(false)
 {
 }
 
-void cell_format_t::reset()
+void import_styles::xf::reset()
 {
-    *this = cell_format_t();
+    *this = xf();
 }
 
-cell_style_t::cell_style_t() :
+import_styles::cell_style::cell_style() :
     xf(0), builtin(0)
 {
 }
 
-void cell_style_t::reset()
+void import_styles::cell_style::reset()
 {
-    *this = cell_style_t();
+    *this = cell_style();
 }
 
-import_styles::import_styles(string_pool& sp) : m_string_pool(sp) {}
+import_styles::import_styles()
+{
+}
 
 import_styles::~import_styles()
 {
@@ -153,7 +155,7 @@ void import_styles::set_font_italic(bool b)
 
 void import_styles::set_font_name(const char* s, size_t n)
 {
-    m_cur_font.name = m_string_pool.intern(s, n).first;
+    m_cur_font.name = pstring(s, n).intern();
 }
 
 void import_styles::set_font_size(double point)
@@ -163,52 +165,7 @@ void import_styles::set_font_size(double point)
 
 void import_styles::set_font_underline(underline_t e)
 {
-    m_cur_font.underline_style = e;
-}
-
-void import_styles::set_font_underline_width(underline_width_t e)
-{
-    m_cur_font.underline_width = e;
-}
-
-void import_styles::set_font_underline_mode(underline_mode_t e)
-{
-    m_cur_font.underline_mode = e;
-}
-
-void import_styles::set_font_underline_type(underline_type_t e)
-{
-    m_cur_font.underline_type = e;
-}
-
-void import_styles::set_font_underline_color(color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue)
-{
-    m_cur_font.underline_color = color_t(alpha, red, green, blue);
-}
-
-void import_styles::set_font_color(color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue)
-{
-    m_cur_font.color = color_t(alpha, red, green, blue);
-}
-
-void import_styles::set_strikethrough_style(strikethrough_style_t s)
-{
-    m_cur_font.strikethrough_style = s;
-}
-
-void import_styles::set_strikethrough_width(strikethrough_width_t s)
-{
-    m_cur_font.strikethrough_width = s;
-}
-
-void import_styles::set_strikethrough_type(strikethrough_type_t s)
-{
-    m_cur_font.strikethrough_type = s;
-}
-
-void import_styles::set_strikethrough_text(strikethrough_text_t s)
-{
-    m_cur_font.strikethrough_text = s;
+    m_cur_font.underline = e;
 }
 
 size_t import_styles::commit_font()
@@ -225,17 +182,17 @@ void import_styles::set_fill_count(size_t n)
 
 void import_styles::set_fill_pattern_type(const char* s, size_t n)
 {
-    m_cur_fill.pattern_type = m_string_pool.intern(s, n).first;
+    m_cur_fill.pattern_type = pstring(s, n).intern();
 }
 
 void import_styles::set_fill_fg_color(color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue)
 {
-    m_cur_fill.fg_color = color_t(alpha, red, green, blue);
+    m_cur_fill.fg_color = color(alpha, red, green, blue);
 }
 
 void import_styles::set_fill_bg_color(color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue)
 {
-    m_cur_fill.bg_color = color_t(alpha, red, green, blue);
+    m_cur_fill.bg_color = color(alpha, red, green, blue);
 }
 
 size_t import_styles::commit_fill()
@@ -245,43 +202,6 @@ size_t import_styles::commit_fill()
     return m_fills.size() - 1;
 }
 
-namespace {
-
-border_attrs_t* get_border_attrs(border_t& cur_border, border_direction_t dir)
-{
-    border_attrs_t* p = nullptr;
-    switch (dir)
-    {
-        case border_direction_t::top:
-            p = &cur_border.top;
-        break;
-        case border_direction_t::bottom:
-            p = &cur_border.bottom;
-        break;
-        case border_direction_t::left:
-            p = &cur_border.left;
-        break;
-        case border_direction_t::right:
-            p = &cur_border.right;
-        break;
-        case border_direction_t::diagonal:
-            p = &cur_border.diagonal;
-        break;
-        case border_direction_t::diagonal_bl_tr:
-            p = &cur_border.diagonal_bl_tr;
-        break;
-        case border_direction_t::diagonal_tl_br:
-            p = &cur_border.diagonal_tl_br;
-        break;
-        default:
-            ;
-    }
-
-    return p;
-}
-
-}
-
 void import_styles::set_border_count(size_t n)
 {
     m_borders.reserve(n);
@@ -289,32 +209,28 @@ void import_styles::set_border_count(size_t n)
 
 void import_styles::set_border_style(border_direction_t dir, const char* s, size_t n)
 {
-    assert(false);
-}
-
-void import_styles::set_border_style(border_direction_t dir, border_style_t style)
-{
-    border_attrs_t* p = get_border_attrs(m_cur_border, dir);
-    if (p)
-        p->style = style;
-}
-
-void import_styles::set_border_color(
-    border_direction_t dir, color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue)
-{
-    border_attrs_t* p = get_border_attrs(m_cur_border, dir);
-    if (p)
-        p->border_color = color_t(alpha, red, green, blue);
-}
-
-void import_styles::set_border_width(border_direction_t dir, double width, orcus::length_unit_t unit)
-{
-    border_attrs_t* p = get_border_attrs(m_cur_border, dir);
-    if (p)
+    border_attrs* p = NULL;
+    switch (dir)
     {
-        p->border_width.value = width;
-        p->border_width.unit = unit;
+        case border_top:
+            p = &m_cur_border.top;
+        break;
+        case border_bottom:
+            p = &m_cur_border.bottom;
+        break;
+        case border_left:
+            p = &m_cur_border.left;
+        break;
+        case border_right:
+            p = &m_cur_border.right;
+        break;
+        case border_diagonal:
+            p = &m_cur_border.diagonal;
+        break;
     }
+
+    if (p)
+        p->style = pstring(s, n).intern();
 }
 
 size_t import_styles::commit_border()
@@ -334,16 +250,6 @@ void import_styles::set_cell_locked(bool b)
     m_cur_protection.locked = b;
 }
 
-void import_styles::set_cell_print_content(bool b)
-{
-    m_cur_protection.print_content = b;
-}
-
-void import_styles::set_cell_formula_hidden(bool b)
-{
-    m_cur_protection.formula_hidden = b;
-}
-
 size_t import_styles::commit_cell_protection()
 {
     m_protections.push_back(m_cur_protection);
@@ -351,26 +257,22 @@ size_t import_styles::commit_cell_protection()
     return m_protections.size() - 1;
 }
 
-void import_styles::set_number_format_count(size_t n)
-{
-    m_number_formats.reserve(n);
-}
-
-void import_styles::set_number_format_identifier(size_t id)
-{
-    m_cur_number_format.identifier = id;
-}
-
-void import_styles::set_number_format_code(const char* s, size_t n)
+void import_styles::set_number_format(const char* s, size_t n)
 {
     m_cur_number_format.format_string = pstring(s, n);
 }
 
 size_t import_styles::commit_number_format()
 {
+    std::vector<number_format>::iterator itr = std::find(m_number_formats.begin(), m_number_formats.end(), m_cur_number_format);
+    if(itr != m_number_formats.end())
+    {
+        m_cur_number_format.reset();
+        return std::distance(m_number_formats.begin(), itr);
+    }
+
     m_number_formats.push_back(m_cur_number_format);
-    m_cur_number_format.reset();
-    return m_number_formats.size() - 1;
+    return m_number_formats.size () - 1;
 }
 
 void import_styles::set_cell_style_xf_count(size_t n)
@@ -395,18 +297,6 @@ size_t import_styles::commit_cell_xf()
     m_cell_formats.push_back(m_cur_cell_format);
     m_cur_cell_format.reset();
     return m_cell_formats.size() - 1;
-}
-
-void import_styles::set_dxf_count(size_t n)
-{
-    m_dxf_formats.reserve(n);
-}
-
-size_t import_styles::commit_dxf()
-{
-    m_dxf_formats.push_back(m_cur_cell_format);
-    m_cur_cell_format.reset();
-    return m_dxf_formats.size() - 1;
 }
 
 void import_styles::set_xf_font(size_t index)
@@ -439,21 +329,6 @@ void import_styles::set_xf_style_xf(size_t index)
     m_cur_cell_format.style_xf = index;
 }
 
-void import_styles::set_xf_apply_alignment(bool b)
-{
-    m_cur_cell_format.apply_alignment = b;
-}
-
-void import_styles::set_xf_horizontal_alignment(orcus::spreadsheet::hor_alignment_t align)
-{
-    m_cur_cell_format.hor_align = align;
-}
-
-void import_styles::set_xf_vertical_alignment(orcus::spreadsheet::ver_alignment_t align)
-{
-    m_cur_cell_format.ver_align = align;
-}
-
 void import_styles::set_cell_style_count(size_t n)
 {
     m_cell_styles.reserve(n);
@@ -461,7 +336,7 @@ void import_styles::set_cell_style_count(size_t n)
 
 void import_styles::set_cell_style_name(const char* s, size_t n)
 {
-    m_cur_cell_style.name = m_string_pool.intern(s, n).first;
+    m_cur_cell_style.name = pstring(s, n).intern();
 }
 
 void import_styles::set_cell_style_xf(size_t index)
@@ -474,11 +349,6 @@ void import_styles::set_cell_style_builtin(size_t index)
     m_cur_cell_style.builtin = index;
 }
 
-void import_styles::set_cell_style_parent_name(const char* s, size_t n)
-{
-    m_cur_cell_style.parent_name = m_string_pool.intern(s, n).first;
-}
-
 size_t import_styles::commit_cell_style()
 {
     m_cell_styles.push_back(m_cur_cell_style);
@@ -486,122 +356,28 @@ size_t import_styles::commit_cell_style()
     return m_cell_styles.size() - 1;
 }
 
-const font_t* import_styles::get_font(size_t index) const
+const import_styles::font* import_styles::get_font(size_t index) const
 {
     if (index >= m_fonts.size())
-        return nullptr;
+        return NULL;
 
     return &m_fonts[index];
 }
 
-const cell_format_t* import_styles::get_cell_format(size_t index) const
+const import_styles::xf* import_styles::get_cell_xf(size_t index) const
 {
     if (index >= m_cell_formats.size())
-        return nullptr;
+        return NULL;
 
     return &m_cell_formats[index];
 }
 
-const fill_t* import_styles::get_fill(size_t index) const
+const import_styles::fill* import_styles::get_fill(size_t index) const
 {
     if (index >= m_fills.size())
-        return nullptr;
+        return NULL;
 
     return &m_fills[index];
 }
 
-const border_t* import_styles::get_border(size_t index) const
-{
-    if (index >= m_borders.size())
-        return nullptr;
-
-    return &m_borders[index];
-}
-
-const protection_t* import_styles::get_protection(size_t index) const
-{
-    if (index >= m_protections.size())
-        return nullptr;
-
-    return &m_protections[index];
-}
-
-const number_format_t* import_styles::get_number_format(size_t index) const
-{
-    if (index >= m_number_formats.size())
-        return nullptr;
-
-    return &m_number_formats[index];
-}
-
-const cell_format_t* import_styles::get_cell_style_format(size_t index) const
-{
-    if (index >= m_cell_style_formats.size())
-        return nullptr;
-
-    return &m_cell_style_formats[index];
-}
-
-const cell_format_t* import_styles::get_dxf_format(size_t index) const
-{
-    if (index >= m_dxf_formats.size())
-        return nullptr;
-
-    return &m_dxf_formats[index];
-}
-
-const cell_style_t* import_styles::get_cell_style(size_t index) const
-{
-    if (index >= m_cell_styles.size())
-        return nullptr;
-
-    return &m_cell_styles[index];
-}
-
-size_t import_styles::get_font_count() const
-{
-    return m_fonts.size();
-}
-
-size_t import_styles::get_fill_count() const
-{
-    return m_fills.size();
-}
-
-size_t import_styles::get_border_count() const
-{
-    return m_borders.size();
-}
-
-size_t import_styles::get_protection_count() const
-{
-    return m_protections.size();
-}
-
-size_t import_styles::get_number_format_count() const
-{
-    return m_number_formats.size();
-}
-
-size_t import_styles::get_cell_formats_count() const
-{
-    return m_cell_formats.size();
-}
-
-size_t import_styles::get_cell_style_formats_count() const
-{
-    return m_cell_style_formats.size();
-}
-
-size_t import_styles::get_dxf_count() const
-{
-    return m_dxf_formats.size();
-}
-
-size_t import_styles::get_cell_styles_count() const
-{
-    return m_cell_styles.size();
-}
-
 }}
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

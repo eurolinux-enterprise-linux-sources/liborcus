@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 PROGDIR=`dirname $0`
 source $PROGDIR/orcus-common-func.sh

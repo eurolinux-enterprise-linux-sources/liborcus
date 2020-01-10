@@ -1,38 +1,53 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_ORCUS_DOM_TREE_HPP
-#define INCLUDED_ORCUS_DOM_TREE_HPP
+#ifndef __ORCUS_DOM_TREE_HPP__
+#define __ORCUS_DOM_TREE_HPP__
 
 #include "pstring.hpp"
 #include "types.hpp"
 
 #include <vector>
 #include <ostream>
-#include <memory>
+
+#include <boost/ptr_container/ptr_vector.hpp>
 
 namespace orcus {
 
 class xmlns_context;
 struct dom_tree_impl;
 
-namespace sax {
-
-struct doctype_declaration;
-
-}
-
 /**
  * Ordinary DOM tree representing the structure of a XML content in full.
  */
 class ORCUS_DLLPUBLIC dom_tree
 {
-    dom_tree(const dom_tree&) = delete;
-    dom_tree& operator= (const dom_tree&) = delete;
+    dom_tree(const dom_tree&); // disabled
+    dom_tree& operator= (const dom_tree&); // disabled
 
 public:
 
@@ -59,7 +74,7 @@ public:
 
     typedef std::vector<attr> attrs_type;
 
-    enum class node_type { element, content };
+    enum node_type { node_element, node_content };
 
     struct node
     {
@@ -71,7 +86,7 @@ public:
         virtual void print(std::ostream& os, const xmlns_context& cxt) const = 0;
     };
 
-    typedef std::vector<std::unique_ptr<node>> nodes_type;
+    typedef boost::ptr_vector<node> nodes_type;
 
     struct element : public node
     {
@@ -98,39 +113,18 @@ public:
     dom_tree(xmlns_context& cxt);
     ~dom_tree();
 
-    /**
-     * Parse a given XML stream and build the content tree.
-     *
-     * @param strm XML stream.
-     */
-    void load(const std::string& strm);
-
-    /**
-     * Swap the content with another dom_tree instance.
-     *
-     * @param other the dom_tree instance to swap the content with.
-     */
-    void swap(dom_tree& other);
-
-    void start_declaration(const pstring& name);
-    void end_declaration(const pstring& name);
+    void end_declaration();
     void start_element(xmlns_id_t ns, const pstring& name);
     void end_element(xmlns_id_t ns, const pstring& name);
     void set_characters(const pstring& val);
     void set_attribute(xmlns_id_t ns, const pstring& name, const pstring& val);
 
-    void set_doctype(const sax::doctype_declaration& dtd);
-    const sax::doctype_declaration* get_doctype() const;
-
-    const attrs_type* get_declaration_attributes(const pstring& name) const;
-
     void dump_compact(std::ostream& os) const;
 
 private:
-    std::unique_ptr<dom_tree_impl> mp_impl;
+    dom_tree_impl* mp_impl;
 };
 
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

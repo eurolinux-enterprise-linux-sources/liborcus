@@ -1,17 +1,37 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_ORCUS_OPC_CONTEXT_HPP
-#define INCLUDED_ORCUS_OPC_CONTEXT_HPP
+#ifndef __ORCUS_OPC_CONTEXT_HPP__
+#define __ORCUS_OPC_CONTEXT_HPP__
 
 #include "xml_context_base.hpp"
 #include "ooxml_types.hpp"
 
-#include <unordered_set>
+#include <boost/unordered_set.hpp>
 #include <vector>
 
 namespace orcus {
@@ -24,18 +44,18 @@ namespace orcus {
 class opc_content_types_context : public xml_context_base
 {
 public:
-    typedef std::unordered_set<pstring, pstring::hash> ct_cache_type;
+    typedef boost::unordered_set<pstring, pstring::hash> ct_cache_type;
 
-    opc_content_types_context(session_context& session_cxt, const tokens& _tokens);
+    opc_content_types_context(const tokens& _tokens);
     virtual ~opc_content_types_context();
 
     virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const;
-    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
+    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) const;
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base *child);
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const::std::vector<xml_token_attr_t> &attrs);
     virtual bool end_element(xmlns_id_t ns, xml_token_t name);
-    virtual void characters(const pstring &str, bool transient);
+    virtual void characters(const pstring &str);
 
     /**
      * Swap stored xml part info with the instance passed as the argument.
@@ -65,18 +85,18 @@ private:
 class opc_relations_context : public xml_context_base
 {
 public:
-    typedef std::unordered_set<pstring, pstring::hash> schema_cache_type;
+    typedef boost::unordered_set<pstring, pstring::hash> schema_cache_type;
 
-    opc_relations_context(session_context& session_cxt, const tokens& _tokens);
+    opc_relations_context(const tokens& _tokens);
     virtual ~opc_relations_context();
 
     virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const;
-    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name);
+    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) const;
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base *child);
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const::std::vector<xml_token_attr_t> &attrs);
     virtual bool end_element(xmlns_id_t ns, xml_token_t name);
-    virtual void characters(const pstring &str, bool transient);
+    virtual void characters(const pstring &str);
 
     void init();
     void pop_rels(::std::vector<opc_rel_t>& rels);
@@ -89,4 +109,3 @@ private:
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

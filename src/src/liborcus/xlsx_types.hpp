@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010 Kohei Yoshida
+ * 
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ * 
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #ifndef __ORCUS_XLSX_TYPES_HPP__
 #define __ORCUS_XLSX_TYPES_HPP__
@@ -11,12 +31,6 @@
 #include "ooxml_types.hpp"
 
 namespace orcus {
-
-namespace spreadsheet { namespace iface {
-
-class import_sheet;
-
-}}
 
 struct xlsx_rel_sheet_info : public opc_rel_extra
 {
@@ -28,44 +42,6 @@ struct xlsx_rel_sheet_info : public opc_rel_extra
     virtual ~xlsx_rel_sheet_info() {}
 };
 
-struct xlsx_rel_table_info : public opc_rel_extra
-{
-    spreadsheet::iface::import_sheet* sheet_interface;
-
-    xlsx_rel_table_info() : sheet_interface(nullptr) {}
-
-    virtual ~xlsx_rel_table_info() {}
-};
-
-enum xlsx_cell_t
-{
-    xlsx_ct_unknown = 0,
-    xlsx_ct_boolean,
-    xlsx_ct_error,
-    xlsx_ct_numeric,
-    xlsx_ct_inline_string,
-    xlsx_ct_shared_string,
-    xlsx_ct_formula_string,
-};
-
-xlsx_cell_t to_xlsx_cell_type(const pstring& s);
-
-pstring to_string(xlsx_cell_t type);
-
-enum xlsx_rev_row_column_action_t
-{
-    xlsx_rev_rca_unknown = 0,
-    xlsx_rev_rca_delete_column,
-    xlsx_rev_rca_delete_row,
-    xlsx_rev_rca_insert_column,
-    xlsx_rev_rca_insert_row
-};
-
-xlsx_rev_row_column_action_t to_xlsx_rev_row_column_action_type(const pstring& s);
-
-pstring to_string(xlsx_rev_row_column_action_t type);
-
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

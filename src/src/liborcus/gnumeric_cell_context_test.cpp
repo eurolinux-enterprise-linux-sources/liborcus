@@ -1,16 +1,36 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2013 Kohei Yoshida
+ * Copyright (c) 2013 Markus Mohrhard
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "gnumeric_cell_context.hpp"
 #include "gnumeric_tokens.hpp"
 #include "gnumeric_namespace_types.hpp"
 #include "gnumeric_token_constants.hpp"
 #include "mock_spreadsheet.hpp"
-#include "session_context.hpp"
 #include "orcus/types.hpp"
 
 #include <iostream>
@@ -45,7 +65,7 @@ public:
     {
         assert(row == 10);
         assert(col == 321);
-        assert(id == 2);
+        assert(id = 2);
     }
 
     virtual void set_shared_formula(row_t row, col_t col, size_t id)
@@ -61,7 +81,7 @@ public:
         assert(id == 2);
         assert(col == 15);
         assert(row == 5);
-        assert(grammar == spreadsheet::formula_grammar_t::gnumeric);
+        assert(grammar == spreadsheet::gnumeric);
         assert(string(s, n) == "=basicFormulaString");
     }
 
@@ -70,7 +90,7 @@ public:
     {
         assert(row == 9);
         assert(col == 11);
-        assert(grammar == formula_grammar_t::gnumeric);
+        assert(grammar == gnumeric);
         assert(string(s, n) == "=formula");
     }
 
@@ -79,7 +99,7 @@ public:
     {
         assert(row == 19);
         assert(col == 111);
-        assert(grammar == formula_grammar_t::gnumeric);
+        assert(grammar == gnumeric);
         assert(string(s, n) == "=arrayFormula");
         assert(rows == 2);
         assert(cols == 3);
@@ -114,18 +134,17 @@ void test_cell_value()
 {
     mock_sheet sheet;
     import_factory factory;
-    session_context cxt;
 
-    orcus::gnumeric_cell_context context(cxt, orcus::gnumeric_tokens, &factory, &sheet);
+    orcus::gnumeric_cell_context context(orcus::gnumeric_tokens, &factory, &sheet);
 
     orcus::xmlns_id_t ns = NS_gnumeric_gnm;
     orcus::xml_token_t elem = XML_Cell;
     orcus::xml_attrs_t attrs;
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "1", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "2", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ValueType, "40", false));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "1"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "2"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ValueType, "40"));
     context.start_element(ns, elem, attrs);
-    context.characters("5", false);
+    context.characters("5");
     context.end_element(ns, elem);
 }
 
@@ -133,18 +152,17 @@ void test_cell_bool()
 {
     mock_sheet sheet;
     import_factory factory;
-    session_context cxt;
 
-    orcus::gnumeric_cell_context context(cxt, orcus::gnumeric_tokens, &factory, &sheet);
+    orcus::gnumeric_cell_context context(orcus::gnumeric_tokens, &factory, &sheet);
 
     orcus::xmlns_id_t ns = NS_gnumeric_gnm;
     orcus::xml_token_t elem = XML_Cell;
     orcus::xml_attrs_t attrs;
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "31", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "32", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ValueType, "20", false));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "31"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "32"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ValueType, "20"));
     context.start_element(ns, elem, attrs);
-    context.characters("TRUE", false);
+    context.characters("TRUE");
     context.end_element(ns, elem);
 }
 
@@ -152,18 +170,17 @@ void test_cell_string()
 {
     mock_sheet sheet;
     mock_factory factory;
-    session_context cxt;
 
-    orcus::gnumeric_cell_context context(cxt, orcus::gnumeric_tokens, &factory, &sheet);
+    orcus::gnumeric_cell_context context(orcus::gnumeric_tokens, &factory, &sheet);
 
     orcus::xmlns_id_t ns = NS_gnumeric_gnm;
     orcus::xml_token_t elem = XML_Cell;
     orcus::xml_attrs_t attrs;
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "10", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "321", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ValueType, "60", false));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "10"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "321"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ValueType, "60"));
     context.start_element(ns, elem, attrs);
-    context.characters("14 char string", false);
+    context.characters("14 char string");
     context.end_element(ns, elem);
 }
 
@@ -171,20 +188,19 @@ void test_shared_formula_with_string()
 {
     mock_sheet sheet;
     mock_factory factory;
-    session_context cxt;
 
-    orcus::gnumeric_cell_context context(cxt, orcus::gnumeric_tokens, &factory, &sheet);
+    orcus::gnumeric_cell_context context(orcus::gnumeric_tokens, &factory, &sheet);
 
     orcus::xmlns_id_t ns = NS_gnumeric_gnm;
     orcus::xml_token_t elem = XML_Cell;
     orcus::xml_attrs_t attrs;
 
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "5", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "15", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ExprID, "2", false));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "5"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "15"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ExprID, "2"));
 
     context.start_element(ns, elem, attrs);
-    context.characters("=basicFormulaString", false);
+    context.characters("=basicFormulaString");
     context.end_element(ns, elem);
 }
 
@@ -192,17 +208,16 @@ void test_shared_formula_without_string()
 {
     mock_sheet sheet;
     mock_factory factory;
-    session_context cxt;
 
-    orcus::gnumeric_cell_context context(cxt, orcus::gnumeric_tokens, &factory, &sheet);
+    orcus::gnumeric_cell_context context(orcus::gnumeric_tokens, &factory, &sheet);
 
     orcus::xmlns_id_t ns = NS_gnumeric_gnm;
     orcus::xml_token_t elem = XML_Cell;
     orcus::xml_attrs_t attrs;
 
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "6", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "16", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ExprID, "3", false));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "6"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "16"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_ExprID, "3"));
 
     context.start_element(ns, elem, attrs);
     context.end_element(ns, elem);
@@ -212,17 +227,16 @@ void test_cell_formula()
 {
     mock_sheet sheet;
     mock_factory factory;
-    session_context cxt;
 
-    orcus::gnumeric_cell_context context(cxt, orcus::gnumeric_tokens, &factory, &sheet);
+    orcus::gnumeric_cell_context context(orcus::gnumeric_tokens, &factory, &sheet);
 
     orcus::xmlns_id_t ns = NS_gnumeric_gnm;
     orcus::xml_token_t elem = XML_Cell;
     orcus::xml_attrs_t attrs;
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "9", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "11", false));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "9"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "11"));
     context.start_element(ns, elem, attrs);
-    context.characters("=formula", false);
+    context.characters("=formula");
     context.end_element(ns, elem);
 }
 
@@ -230,19 +244,18 @@ void test_cell_array_formula()
 {
     mock_sheet sheet;
     mock_factory factory;
-    session_context cxt;
 
-    orcus::gnumeric_cell_context context(cxt, orcus::gnumeric_tokens, &factory, &sheet);
+    orcus::gnumeric_cell_context context(orcus::gnumeric_tokens, &factory, &sheet);
 
     orcus::xmlns_id_t ns = NS_gnumeric_gnm;
     orcus::xml_token_t elem = XML_Cell;
     orcus::xml_attrs_t attrs;
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "19", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "111", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Rows, "2", false));
-    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Cols, "3", false));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Row, "19"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Col, "111"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Rows, "2"));
+    attrs.push_back(xml_token_attr_t(NS_gnumeric_gnm, XML_Cols, "3"));
     context.start_element(ns, elem, attrs);
-    context.characters("=arrayFormula", false);
+    context.characters("=arrayFormula");
     context.end_element(ns, elem);
 }
 
@@ -260,4 +273,3 @@ int main()
 
     return EXIT_SUCCESS;
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

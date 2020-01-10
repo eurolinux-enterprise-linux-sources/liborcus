@@ -1,18 +1,10 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
 #include "mock_spreadsheet.hpp"
 #include "ooxml_namespace_types.hpp"
 #include "ooxml_tokens.hpp"
 #include "ooxml_schemas.hpp"
 #include "xlsx_sheet_context.hpp"
 #include "ooxml_token_constants.hpp"
-#include "xlsx_session_data.hpp"
 #include "orcus/types.hpp"
-#include "orcus/config.hpp"
 
 using namespace orcus;
 using namespace std;
@@ -27,77 +19,39 @@ public:
 
     virtual void set_value(row_t row, col_t col, double val)
     {
-        assert(row == -1);
+        assert(row == 0);
         assert(col == 0);
         assert(val == 5.0);
-    }
-
-    virtual void set_bool(row_t row, col_t col, bool val)
-    {
-        assert(row == -1);
-        assert(col == 0);
-        assert(val == true);
     }
 
     virtual void set_array_formula(row_t row, col_t col, formula_grammar_t grammar,
             const char* s, size_t n, const char* s_range, size_t n_range)
     {
-        assert(row == -1);
+        assert(row == 0);
         assert(col == 0);
-        assert(grammar == formula_grammar_t::xlsx_2007);
+        assert(grammar == xlsx_2007);
         assert(string(s, n) == "A1:A2");
         assert(string(s_range, n_range) == "B3:B4");
     }
 
 };
 
-class mock_sheet_properties : public import_sheet_properties
-{
-public:
-    void set_column_hidden(col_t col, bool hidden)
-    {
-        assert(col == 1);
-        assert(hidden);
-    }
-
-    void set_row_hidden(row_t row, bool hidden)
-    {
-        assert(row == 3);
-        assert(hidden);
-    }
-};
-
-class mock_sheet2 : public import_sheet
-{
-public:
-    virtual import_sheet_properties* get_sheet_properties()
-    {
-        return &m_sheet_prop;
-    }
-
-private:
-    mock_sheet_properties m_sheet_prop;
-};
-
 void test_cell_value()
 {
     mock_sheet sheet;
-    session_context cxt(new xlsx_session_data);
-    config opt;
-    opt.structure_check = false;
 
-    orcus::xlsx_sheet_context context(cxt, orcus::ooxml_tokens, 0, &sheet);
-    context.set_config(opt);
+    orcus::xlsx_sheet_context context(orcus::ooxml_tokens, &sheet);
 
     orcus::xmlns_id_t ns = NS_ooxml_xlsx;
     orcus::xml_token_t elem = XML_c;
     orcus::xml_attrs_t attrs;
+    attrs.push_back(xml_token_attr_t(NS_ooxml_xlsx, XML_r, "A1"));
     context.start_element(ns, elem, attrs);
 
     {
         xml_attrs_t val_attrs;
         context.start_element(ns, XML_v, val_attrs);
-        context.characters("5", false);
+        context.characters("5");
         context.end_element(ns, XML_v);
     }
 
@@ -107,23 +61,20 @@ void test_cell_value()
 void test_cell_bool()
 {
     mock_sheet sheet;
-    session_context cxt(new xlsx_session_data);
-    config opt;
-    opt.structure_check = false;
 
-    orcus::xlsx_sheet_context context(cxt, orcus::ooxml_tokens, 0, &sheet);
-    context.set_config(opt);
+    orcus::xlsx_sheet_context context(orcus::ooxml_tokens, &sheet);
 
     orcus::xmlns_id_t ns = NS_ooxml_xlsx;
     orcus::xml_token_t elem = XML_c;
     orcus::xml_attrs_t attrs;
-    attrs.push_back(xml_token_attr_t(NS_ooxml_xlsx, XML_t, "b", false));
+    attrs.push_back(xml_token_attr_t(NS_ooxml_xlsx, XML_r, "A1"));
+    attrs.push_back(xml_token_attr_t(NS_ooxml_xlsx, XML_t, "b"));
     context.start_element(ns, elem, attrs);
 
     {
         xml_attrs_t val_attrs;
         context.start_element(ns, XML_v, val_attrs);
-        context.characters("1", false);
+        context.characters("1");
         context.end_element(ns, XML_v);
     }
 
@@ -133,72 +84,30 @@ void test_cell_bool()
 void test_array_formula()
 {
     mock_sheet sheet;
-    session_context cxt(new xlsx_session_data);
-    config opt;
-    opt.structure_check = false;
 
-    orcus::xlsx_sheet_context context(cxt, orcus::ooxml_tokens, 0, &sheet);
-    context.set_config(opt);
+    orcus::xlsx_sheet_context context(orcus::ooxml_tokens, &sheet);
 
     orcus::xmlns_id_t ns = NS_ooxml_xlsx;
     orcus::xml_token_t elem = XML_c;
     orcus::xml_attrs_t attrs;
+    attrs.push_back(xml_token_attr_t(NS_ooxml_xlsx, XML_r, "A1"));
     context.start_element(ns, elem, attrs);
 
     {
         xml_attrs_t formula_attrs;
-        formula_attrs.push_back(xml_token_attr_t(NS_ooxml_xlsx, XML_t, "array", false));
-        formula_attrs.push_back(xml_token_attr_t(NS_ooxml_xlsx, XML_ref, "B3:B4", false));
+        formula_attrs.push_back(xml_token_attr_t(NS_ooxml_xlsx, XML_t, "array"));
+        formula_attrs.push_back(xml_token_attr_t(NS_ooxml_xlsx, XML_ref, "B3:B4"));
         context.start_element(ns, XML_f, formula_attrs);
-        context.characters("A1:A2", false);
+        context.characters("A1:A2");
         context.end_element(ns, XML_f);
     }
     {
         xml_attrs_t val_attrs;
         context.start_element(ns, XML_v, val_attrs);
-        context.characters("5", false);
+        context.characters("5");
         context.end_element(ns, XML_v);
     }
 
-    context.end_element(ns, elem);
-}
-
-void test_hidden_col()
-{
-    mock_sheet2 sheet;
-    session_context cxt(new xlsx_session_data);
-    config opt;
-    opt.structure_check = false;
-
-    orcus::xlsx_sheet_context context(cxt, orcus::ooxml_tokens, 0, &sheet);
-    context.set_config(opt);
-
-    orcus::xmlns_id_t ns = NS_ooxml_xlsx;
-    orcus::xml_token_t elem = XML_col;
-    orcus::xml_attrs_t attrs;
-    attrs.push_back(orcus::xml_token_attr_t(ns, XML_min, "2", false));
-    attrs.push_back(orcus::xml_token_attr_t(ns, XML_max, "2", false));
-    attrs.push_back(orcus::xml_token_attr_t(ns, XML_hidden, "1", false));
-    context.start_element(ns, elem, attrs);
-    context.end_element(ns, elem);
-}
-
-void test_hidden_row()
-{
-    mock_sheet2 sheet;
-    session_context cxt(new xlsx_session_data);
-    config opt;
-    opt.structure_check = false;
-
-    orcus::xlsx_sheet_context context(cxt, orcus::ooxml_tokens, 0, &sheet);
-    context.set_config(opt);
-
-    orcus::xmlns_id_t ns = NS_ooxml_xlsx;
-    orcus::xml_token_t elem = XML_row;
-    orcus::xml_attrs_t attrs;
-    attrs.push_back(orcus::xml_token_attr_t(ns, XML_r, "4", false));
-    attrs.push_back(orcus::xml_token_attr_t(ns, XML_hidden, "1", false));
-    context.start_element(ns, elem, attrs);
     context.end_element(ns, elem);
 }
 
@@ -207,10 +116,5 @@ void test_hidden_row()
 int main()
 {
     test_cell_value();
-    test_cell_bool();
-    test_array_formula();
-    test_hidden_col();
-    test_hidden_row();
     return 0;
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

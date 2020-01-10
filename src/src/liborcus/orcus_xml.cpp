@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/orcus_xml.hpp"
 #include "orcus/global.hpp"
@@ -22,6 +42,7 @@
 #endif
 
 #include <vector>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <fstream>
 
 using namespace std;
@@ -43,7 +64,7 @@ class xml_data_sax_handler
 
         scope(xmlns_id_t _ns, const pstring& _name) :
             ns(_ns), name(_name),
-            element_open_begin(nullptr), element_open_end(nullptr),
+            element_open_begin(NULL), element_open_end(NULL),
             type(xml_map_tree::element_unknown) {}
     };
 
@@ -69,7 +90,7 @@ private:
             if (it->ns == ns && it->name == name)
                 return &(*it);
         }
-        return nullptr;
+        return NULL;
     }
 
     void set_single_link_cell(const xml_map_tree::cell_reference& ref, const pstring& val)
@@ -105,18 +126,10 @@ public:
         m_link_positions(link_positions),
         m_map_tree(map_tree),
         m_map_tree_walker(map_tree.get_tree_walker()),
-        mp_current_elem(nullptr),
+        mp_current_elem(NULL),
         m_in_range_ref(false) {}
 
-    void doctype(const sax::doctype_declaration&)
-    {
-    }
-
-    void start_declaration(const pstring&)
-    {
-    }
-
-    void end_declaration(const pstring&)
+    void declaration()
     {
         m_attrs.clear();
     }
@@ -137,7 +150,7 @@ public:
             xml_map_tree::attribute_store_type::const_iterator it = linked_attrs.begin(), it_end = linked_attrs.end();
             for (; it != it_end; ++it)
             {
-                const xml_map_tree::attribute& linked_attr = **it;
+                const xml_map_tree::attribute& linked_attr = *it;
                 const sax_ns_parser_attribute* p = find_attr_by_name(linked_attr.ns, linked_attr.name);
                 if (!p)
                     continue;
@@ -199,7 +212,7 @@ public:
         mp_current_elem = m_map_tree_walker.pop_element(elem.ns, elem.name);
     }
 
-    void characters(const pstring& val, bool /*transient*/)
+    void characters(const pstring& val)
     {
         if (!mp_current_elem)
             return;
@@ -235,28 +248,27 @@ public:
 /**
  * Used in write_range_reference_group().
  */
-struct scope
+struct scope : boost::noncopyable
 {
     const xml_map_tree::element& element;
     xml_map_tree::element_store_type::const_iterator current_child_pos;
     xml_map_tree::element_store_type::const_iterator end_child_pos;
     bool opened:1;
 
-    scope(const scope&) = delete;
-    scope& operator=(const scope&) = delete;
-
     scope(const xml_map_tree::element& _elem) :
         element(_elem), opened(false)
     {
-        end_child_pos = element.child_elements->end();
         current_child_pos = end_child_pos;
 
         if (element.elem_type == xml_map_tree::element_unlinked)
+        {
             current_child_pos = element.child_elements->begin();
+            end_child_pos = element.child_elements->end();
+        }
     }
 };
 
-typedef std::vector<std::unique_ptr<scope>> scopes_type;
+typedef boost::ptr_vector<scope> scopes_type;
 
 void write_opening_element(
     ostream& os, const xml_map_tree::element& elem, const xml_map_tree::range_reference& ref,
@@ -276,7 +288,7 @@ void write_opening_element(
     xml_map_tree::attribute_store_type::const_iterator it = elem.attributes.begin(), it_end = elem.attributes.end();
     for (; it != it_end; ++it)
     {
-        const xml_map_tree::attribute& attr = **it;
+        const xml_map_tree::attribute& attr = *it;
         if (attr.ref_type != xml_map_tree::reference_range_field)
             // In theory this should never happen but it won't hurt to check.
             continue;
@@ -299,7 +311,7 @@ void write_opening_element(
     xml_map_tree::attribute_store_type::const_iterator it = elem.attributes.begin(), it_end = elem.attributes.end();
     for (; it != it_end; ++it)
     {
-        const xml_map_tree::attribute& attr = **it;
+        const xml_map_tree::attribute& attr = *it;
         if (attr.ref_type != xml_map_tree::reference_cell)
             // We should only see single linked cell here, as all
             // field links are handled by the range parent above.
@@ -343,13 +355,13 @@ void write_range_reference_group(
     scopes_type scopes;
     for (spreadsheet::row_t current_row = 0; current_row < ref.row_size; ++current_row)
     {
-        scopes.push_back(orcus::make_unique<scope>(root)); // root element
+        scopes.push_back(new scope(root)); // root element
 
         while (!scopes.empty())
         {
             bool new_scope = false;
 
-            scope& cur_scope = *scopes.back();
+            scope& cur_scope = scopes.back();
 
             // Self-closing element has no child elements nor content.
             bool self_close =
@@ -372,13 +384,13 @@ void write_range_reference_group(
             // Go though all child elements.
             for (; cur_scope.current_child_pos != cur_scope.end_child_pos; ++cur_scope.current_child_pos)
             {
-                const xml_map_tree::element& child_elem = **cur_scope.current_child_pos;
+                const xml_map_tree::element& child_elem = *cur_scope.current_child_pos;
                 if (child_elem.elem_type == xml_map_tree::element_unlinked)
                 {
                     // This is a non-leaf element.  Push a new scope with this
                     // element and re-start the loop.
                     ++cur_scope.current_child_pos;
-                    scopes.push_back(orcus::make_unique<scope>(child_elem));
+                    scopes.push_back(new scope(child_elem));
                     new_scope = true;
                     break;
                 }
@@ -397,12 +409,12 @@ void write_range_reference_group(
                 continue;
 
             // Write content of this element before closing it (if it's linked).
-            if (scopes.back()->element.ref_type == xml_map_tree::reference_range_field)
+            if (scopes.back().element.ref_type == xml_map_tree::reference_range_field)
                 sheet->write_string(
-                    os, ref.pos.row + 1 + current_row, ref.pos.col + scopes.back()->element.field_ref->column_pos);
+                    os, ref.pos.row + 1 + current_row, ref.pos.col + scopes.back().element.field_ref->column_pos);
 
             // Close this element for good, and exit the current scope.
-            os << "</" << scopes.back()->element << ">";
+            os << "</" << scopes.back().element << ">";
             scopes.pop_back();
         }
     }
@@ -430,7 +442,7 @@ void write_range_reference(ostream& os, const xml_map_tree::element& elem_top, c
     // TODO: For now, we assume that there is only one child element under the
     // range ref parent.
     write_range_reference_group(
-       os, **elem_top.child_elements->begin(), *elem_top.range_parent, factory);
+       os, *elem_top.child_elements->begin(), *elem_top.range_parent, factory);
 }
 
 struct less_by_opening_elem_pos : std::binary_function<xml_map_tree::element*, xml_map_tree::element*, bool>
@@ -470,7 +482,7 @@ struct orcus_xml_impl
 
     xml_map_tree::cell_position m_cur_range_ref;
 
-    explicit orcus_xml_impl(xmlns_repository& ns_repo) : mp_import_factory(nullptr), mp_export_factory(nullptr), m_ns_repo(ns_repo), m_ns_cxt_map(ns_repo.create_context()), m_map_tree(m_ns_repo) {}
+    explicit orcus_xml_impl(xmlns_repository& ns_repo) : mp_import_factory(NULL), mp_export_factory(NULL), m_ns_repo(ns_repo), m_ns_cxt_map(ns_repo.create_context()), m_map_tree(m_ns_repo) {}
 };
 
 orcus_xml::orcus_xml(xmlns_repository& ns_repo, spreadsheet::iface::import_factory* im_fact, spreadsheet::iface::export_factory* ex_fact) :
@@ -528,7 +540,7 @@ void orcus_xml::read_file(const char* filepath)
     cout << "reading file " << filepath << endl;
 #endif
     string& strm = mp_impl->m_data_strm;
-    strm = load_file_content(filepath);
+    load_file_content(filepath, strm);
     if (strm.empty())
         return;
 
@@ -693,4 +705,3 @@ void orcus_xml::write_file(const char* filepath)
 }
 
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

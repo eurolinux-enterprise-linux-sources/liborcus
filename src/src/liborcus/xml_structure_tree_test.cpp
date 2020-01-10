@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/xml_structure_tree.hpp"
 #include "orcus/xml_namespace.hpp"
@@ -19,12 +39,12 @@ using namespace std;
 using namespace orcus;
 
 const char* base_dirs[] = {
-    SRCDIR"/test/xml-structure/basic-1/",
-    SRCDIR"/test/xml-structure/basic-2/",
-    SRCDIR"/test/xml-structure/basic-3/",
-    SRCDIR"/test/xml-structure/attribute-1/",
-    SRCDIR"/test/xml-structure/nested-repeat-1/",
-    SRCDIR"/test/xml-structure/namespace-default/"
+    "../../test/xml-structure/basic-1/",
+    "../../test/xml-structure/basic-2/",
+    "../../test/xml-structure/basic-3/",
+    "../../test/xml-structure/attribute-1/",
+    "../../test/xml-structure/nested-repeat-1/",
+    "../../test/xml-structure/namespace-default/"
 };
 
 void test_basic()
@@ -34,7 +54,8 @@ void test_basic()
     {
         string filepath(base_dirs[i]);
         filepath.append("input.xml");
-        string strm = load_file_content(filepath.c_str());
+        string strm;
+        load_file_content(filepath.c_str(), strm);
         assert(!strm.empty());
         xmlns_repository xmlns_repo;
         xmlns_context cxt = xmlns_repo.create_context();
@@ -49,7 +70,8 @@ void test_basic()
         // Check the dump content against known datum.
         filepath = base_dirs[i];
         filepath.append("check.txt");
-        string strm_check = load_file_content(filepath.c_str());
+        string strm_check;
+        load_file_content(filepath.c_str(), strm_check);
         assert(!strm_check.empty());
 
         // They should be identical, plus or minus leading/trailing whitespaces.
@@ -64,7 +86,8 @@ void test_walker()
     {
         string filepath(base_dirs[0]);
         filepath.append("input.xml");
-        string strm = load_file_content(filepath.c_str());
+        string strm;
+        load_file_content(filepath.c_str(), strm);
         assert(!strm.empty());
         xmlns_repository xmlns_repo;
         xmlns_context cxt = xmlns_repo.create_context();
@@ -133,7 +156,8 @@ void test_walker()
         string filepath(base_dirs[3]); // attribute-1
         filepath.append("input.xml");
 
-        string strm = load_file_content(filepath.c_str());
+        string strm;
+        load_file_content(filepath.c_str(), strm);
         assert(!strm.empty());
         xmlns_repository xmlns_repo;
         xmlns_context cxt = xmlns_repo.create_context();
@@ -179,4 +203,3 @@ int main()
     test_walker();
     return EXIT_SUCCESS;
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

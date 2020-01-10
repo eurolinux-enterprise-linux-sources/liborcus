@@ -1,12 +1,32 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010-2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_ORCUS_TYPES_HPP
-#define INCLUDED_ORCUS_TYPES_HPP
+#ifndef __ORCUS_TYPES_HPP__
+#define __ORCUS_TYPES_HPP__
 
 #include <cstdlib>
 #include <vector>
@@ -16,15 +36,12 @@
 
 namespace orcus {
 
-// XML specific types
-
 typedef size_t xml_token_t;
 typedef const char* xmlns_id_t;
 
-ORCUS_PSR_DLLPUBLIC extern const xmlns_id_t XMLNS_UNKNOWN_ID;
-ORCUS_PSR_DLLPUBLIC extern const xml_token_t XML_UNKNOWN_TOKEN;
-ORCUS_PSR_DLLPUBLIC extern const size_t index_not_found;
-ORCUS_PSR_DLLPUBLIC extern const size_t unspecified;
+ORCUS_DLLPUBLIC extern const xmlns_id_t XMLNS_UNKNOWN_ID;
+ORCUS_DLLPUBLIC extern const xml_token_t XML_UNKNOWN_TOKEN;
+ORCUS_DLLPUBLIC extern const size_t index_not_found;
 
 struct xml_name_t
 {
@@ -36,75 +53,18 @@ struct xml_name_t
     xml_name_t(const xml_name_t& r) : ns(r.ns), name(r.name) {}
 };
 
-struct ORCUS_PSR_DLLPUBLIC xml_token_attr_t
+struct xml_token_attr_t
 {
     xmlns_id_t ns;
     xml_token_t name;
-    pstring raw_name;
     pstring value;
 
-    /**
-     * Whether or not the attribute value is transient. A transient value is
-     * not guaranteed to be valid after the start_element call ends.  A
-     * non-transient value is guaranteed to be valid during the life cycle of
-     * the xml stream it belongs to.
-     */
-    bool transient;
-
-    xml_token_attr_t();
-    xml_token_attr_t(
-        xmlns_id_t _ns, xml_token_t _name, const pstring& _value, bool _transient);
-    xml_token_attr_t(
-        xmlns_id_t _ns, xml_token_t _name, const pstring& _raw_name,
-        const pstring& _value, bool _transient);
+    xml_token_attr_t() : ns(XMLNS_UNKNOWN_ID), name(XML_UNKNOWN_TOKEN) {}
+    xml_token_attr_t(xmlns_id_t _ns, xml_token_t _name, const pstring& _value) :
+        ns(_ns), name(_name), value(_value) {}
 };
 
-/**
- * Element properties passed to its handler via start_element() and
- * end_element() calls.
- */
-struct ORCUS_PSR_DLLPUBLIC xml_token_element_t
-{
-    xmlns_id_t ns;
-    xml_token_t name;
-    pstring raw_name;
-    std::vector<xml_token_attr_t> attrs;
-
-    xml_token_element_t& operator= (xml_token_element_t) = delete;
-
-    xml_token_element_t();
-    xml_token_element_t(xmlns_id_t _ns, xml_token_t _name, const pstring& _raw_name, std::vector<xml_token_attr_t>&& _attrs);
-    xml_token_element_t(const xml_token_element_t& other);
-    xml_token_element_t(xml_token_element_t&& other);
-};
-
-// Other types
-
-enum class length_unit_t
-{
-    unknown = 0,
-    centimeter,
-    millimeter,
-    xlsx_column_digit,
-    inch,
-    point,
-    twip,
-    pixel
-
-    // TODO: Add more.
-};
-
-struct ORCUS_DLLPUBLIC length_t
-{
-    length_unit_t unit;
-    double value;
-
-    length_t();
-
-    std::string print() const;
-};
-
-struct ORCUS_PSR_DLLPUBLIC date_time_t
+struct date_time_t
 {
     int year;
     int month;
@@ -113,9 +73,7 @@ struct ORCUS_PSR_DLLPUBLIC date_time_t
     int minute;
     double second;
 
-    date_time_t();
-
-    std::string to_string() const;
+    date_time_t() : year(0), month(0), day(0), hour(0), minute(0), second(0.0) {}
 };
 
 typedef ::std::vector<xml_token_attr_t> xml_attrs_t;
@@ -123,4 +81,3 @@ typedef ::std::vector<xml_token_attr_t> xml_attrs_t;
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

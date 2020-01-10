@@ -1,23 +1,40 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_ORCUS_XMLPARSER_HPP
-#define INCLUDED_ORCUS_XMLPARSER_HPP
+#ifndef __ORCUS_XMLPARSER_HPP__
+#define __ORCUS_XMLPARSER_HPP__
 
 #include <cstdlib>
 #include <string>
 #include <exception>
 
 #include "orcus/xml_namespace.hpp"
-#include "orcus/string_pool.hpp"
 
 namespace orcus {
-
-struct config;
 
 class xml_stream_handler;
 class tokens;
@@ -27,58 +44,38 @@ class tokens;
  * the first char of the content stream.  Make sure you finish parsing while
  * the content pointer is valid.
  */
-class xml_stream_parser_base
+class xml_stream_parser
 {
 public:
-    xml_stream_parser_base() = delete;
+    class parse_error : public ::std::exception
+    {
+    public:
+        parse_error(const ::std::string& msg);
+        virtual ~parse_error() throw();
+        virtual const char* what() const throw();
+    private:
+        ::std::string m_msg;
+    };
 
-    virtual void parse() = 0;
+    xml_stream_parser(xmlns_repository& ns_repo, const tokens& tokens, const char* content, size_t size, const ::std::string& name);
+    ~xml_stream_parser();
+
+    void parse();
 
     void set_handler(xml_stream_handler* handler);
     xml_stream_handler* get_handler() const;
 
-protected:
-    xml_stream_parser_base(
-        const config& opt,
-        xmlns_repository& ns_repo, const tokens& tokens, const char* content, size_t size);
-    ~xml_stream_parser_base();
+private:
+    xml_stream_parser(); // disabled
 
-    const config& m_config;
     xmlns_context m_ns_cxt;
     const tokens& m_tokens;
     xml_stream_handler* mp_handler;
     const char* m_content;
     size_t m_size;
-};
-
-class xml_stream_parser : public xml_stream_parser_base
-{
-public:
-    xml_stream_parser(
-        const config& opt,
-        xmlns_repository& ns_repo, const tokens& tokens, const char* content, size_t size);
-    ~xml_stream_parser();
-
-    virtual void parse();
-};
-
-class threaded_xml_stream_parser : public xml_stream_parser_base
-{
-    string_pool m_pool;
-
-public:
-    threaded_xml_stream_parser(
-        const config& opt,
-        xmlns_repository& ns_repo, const tokens& tokens, const char* content, size_t size);
-    ~threaded_xml_stream_parser();
-
-    virtual void parse();
-
-    void swap_string_pool(string_pool& pool);
+    ::std::string m_name;  // stream name
 };
 
 }
 
 #endif
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

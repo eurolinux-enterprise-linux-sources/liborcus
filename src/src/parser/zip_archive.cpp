@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2013 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/zip_archive.hpp"
 #include "orcus/zip_archive_stream.hpp"
@@ -12,7 +32,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include <unordered_map>
+#include <vector>
 #ifdef _WIN32
 #include "win_stdint.h"
 #else
@@ -31,18 +51,14 @@ using namespace std;
 namespace orcus {
 
 zip_error::zip_error() {}
-zip_error::zip_error(const string& msg) : m_msg()
-{
-    ostringstream os;
-    os << "zip error: " << msg;
-    m_msg = os.str();
-}
-
+zip_error::zip_error(const string& msg) : m_msg(msg) {}
 zip_error::~zip_error() throw() {}
 
 const char* zip_error::what() const throw()
 {
-    return m_msg.c_str();
+    ostringstream os;
+    os << "zip error: " << m_msg;
+    return os.str().c_str();
 }
 
 namespace {
@@ -136,7 +152,7 @@ class zip_stream_parser
     }
 
 public:
-    zip_stream_parser() : m_stream(nullptr), m_pos(0), m_pos_internal(0) {}
+    zip_stream_parser() : m_stream(NULL), m_pos(0), m_pos_internal(0) {}
     zip_stream_parser(zip_archive_stream* stream, size_t pos) : m_stream(stream), m_pos(pos), m_pos_internal(0) {}
 
     string read_string(size_t n)
@@ -212,7 +228,7 @@ struct central_dir_end
 class zip_archive_impl
 {
     typedef std::vector<zip_file_param> file_params_type;
-    typedef std::unordered_map<pstring, size_t, pstring::hash> filename_map_type;
+    typedef boost::unordered_map<pstring, size_t, pstring::hash> filename_map_type;
 
     string_pool m_pool;
     zip_archive_stream* m_stream;
@@ -256,7 +272,7 @@ zip_archive_impl::zip_archive_impl(zip_archive_stream* stream) :
     m_stream(stream), m_stream_size(0), m_central_dir_pos(0)
 {
     if (!m_stream)
-        throw zip_error("null stream is not allowed.");
+        zip_error("null stream is not allowed.");
 
     m_stream_size = m_stream->size();
 }
@@ -427,7 +443,7 @@ void zip_archive_impl::dump_file_entry(const char* entry_name) const
 pstring zip_archive_impl::get_file_entry_name(size_t pos) const
 {
     if (pos >= m_file_params.size())
-        return nullptr;
+        return NULL;
 
     return m_file_params[pos].filename;
 }
@@ -513,7 +529,7 @@ size_t zip_archive_impl::seek_central_dir()
     // Read stream backward and try to find the magic number.
 
     size_t read_end_pos = m_stream_size;
-    while (read_end_pos)
+    while (true)
     {
         if (read_end_pos < buf.size())
             // Last segment to read.
@@ -619,4 +635,3 @@ bool zip_archive::read_file_entry(const pstring& entry_name, vector<unsigned cha
 }
 
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

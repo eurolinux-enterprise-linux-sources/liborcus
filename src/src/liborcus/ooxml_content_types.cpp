@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010-2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "ooxml_content_types.hpp"
 
@@ -26,9 +46,6 @@ const content_type_t CT_ooxml_xlsx_sheet_main       = "application/vnd.openxmlfo
 const content_type_t CT_ooxml_xlsx_styles           = "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml";
 const content_type_t CT_ooxml_xlsx_table            = "application/vnd.openxmlformats-officedocument.spreadsheetml.table+xml";
 const content_type_t CT_ooxml_xlsx_worksheet        = "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml";
-const content_type_t CT_ooxml_xlsx_usernames        = "application/vnd.openxmlformats-officedocument.spreadsheetml.userNames+xml";
-const content_type_t CT_ooxml_xlsx_rev_headers      = "application/vnd.openxmlformats-officedocument.spreadsheetml.revisionHeaders+xml";
-const content_type_t CT_ooxml_xlsx_rev_log          = "application/vnd.openxmlformats-officedocument.spreadsheetml.revisionLog+xml";
 const content_type_t CT_ooxml_theme                 = "application/vnd.openxmlformats-officedocument.theme+xml";
 const content_type_t CT_opc_core_properties         = "application/vnd.openxmlformats-package.core-properties+xml";
 const content_type_t CT_opc_relationships           = "application/vnd.openxmlformats-package.relationships+xml";
@@ -54,14 +71,11 @@ content_type_t cts[] = {
     CT_ooxml_xlsx_styles,
     CT_ooxml_xlsx_table,
     CT_ooxml_xlsx_worksheet,
-    CT_ooxml_xlsx_usernames,
-    CT_ooxml_xlsx_rev_headers,
-    CT_ooxml_xlsx_rev_log,
     CT_ooxml_theme,
     CT_opc_core_properties,
     CT_opc_relationships,
     CT_xml,
-    nullptr
+    NULL
 };
 
 }
@@ -69,4 +83,3 @@ content_type_t cts[] = {
 const content_type_t* CT_all = cts;
 
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

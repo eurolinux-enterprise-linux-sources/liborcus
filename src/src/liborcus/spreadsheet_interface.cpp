@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012-2013 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/spreadsheet/import_interface.hpp"
 #include "orcus/spreadsheet/export_interface.hpp"
@@ -14,71 +34,14 @@ import_shared_strings::~import_shared_strings() {}
 
 import_styles::~import_styles() {}
 
-import_sheet_properties::~import_sheet_properties() {}
-
-import_data_table::~import_data_table() {}
-
-import_auto_filter::~import_auto_filter() {}
-
-import_table::~import_table() {}
-
-import_conditional_format::~import_conditional_format() {}
-
-import_auto_filter* import_table::get_auto_filter()
-{
-    return nullptr;
-}
-
 import_sheet::~import_sheet() {}
-
-import_sheet_properties* import_sheet::get_sheet_properties()
-{
-    return nullptr;
-}
-
-import_data_table* import_sheet::get_data_table()
-{
-    return nullptr;
-}
-
-import_auto_filter* import_sheet::get_auto_filter()
-{
-    return nullptr;
-}
-
-import_table* import_sheet::get_table()
-{
-    return nullptr;
-}
-
-import_conditional_format* import_sheet::get_conditional_format()
-{
-    return nullptr;
-}
 
 import_global_settings::~import_global_settings() {}
 
 import_factory::~import_factory() {}
-
-import_global_settings* import_factory::get_global_settings()
-{
-    return nullptr;
-}
-
-import_shared_strings* import_factory::get_shared_strings()
-{
-    return nullptr;
-}
-
-import_styles* import_factory::get_styles()
-{
-    return nullptr;
-}
 
 export_sheet::~export_sheet() {}
 
 export_factory::~export_factory() {}
 
 }}}
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

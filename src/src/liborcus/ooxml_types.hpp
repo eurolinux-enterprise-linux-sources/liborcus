@@ -1,17 +1,37 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_ORCUS_OOXML_TYPES_HPP
-#define INCLUDED_ORCUS_OOXML_TYPES_HPP
+#ifndef __ORCUS_OOXML_TYPES_HPP__
+#define __ORCUS_OOXML_TYPES_HPP__
 
 #include "orcus/pstring.hpp"
 
 #include <iostream>
-#include <unordered_map>
+#include <boost/unordered_map.hpp>
 
 namespace orcus {
 
@@ -33,7 +53,7 @@ struct opc_rel_t
     pstring  target;
     schema_t type;
 
-    opc_rel_t() : type(nullptr) {}
+    opc_rel_t() : type(NULL) {}
     opc_rel_t(const pstring& _rid, const pstring& _target, schema_t _type) :
         rid(_rid), target(_target), type(_type) {}
 };
@@ -46,26 +66,11 @@ struct opc_rel_extra
     virtual ~opc_rel_extra() = 0;
 };
 
-struct opc_rel_extras_t
-{
-    typedef std::unordered_map<pstring, opc_rel_extra*, pstring::hash> map_type;
+inline opc_rel_extra::~opc_rel_extra() {}
 
-    /**
-     * Key is a textual relation ID, while the value is an arbitrary data
-     * associated with the relation ID.
-     */
-    map_type data;
-
-    opc_rel_extras_t(const opc_rel_extras_t&) = delete;
-    opc_rel_extras_t& operator=(const opc_rel_extras_t&) = delete;
-
-    opc_rel_extras_t();
-    ~opc_rel_extras_t();
-
-    void swap(opc_rel_extras_t& other);
-};
+typedef boost::unordered_map<pstring, const opc_rel_extra*, pstring::hash>
+    opc_rel_extras_t;
 
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

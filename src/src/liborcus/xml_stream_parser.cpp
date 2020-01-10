@@ -1,16 +1,34 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010-2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "xml_stream_parser.hpp"
 #include "xml_stream_handler.hpp"
 
 #include "orcus/tokens.hpp"
-
-#include "orcus/threaded_sax_token_parser.hpp"
 #include "orcus/sax_token_parser.hpp"
 
 #include <iostream>
@@ -21,76 +39,49 @@ using namespace std;
 
 namespace orcus {
 
-xml_stream_parser_base::xml_stream_parser_base(
-    const config& opt,
-    xmlns_repository& ns_repo, const tokens& tokens, const char* content, size_t size) :
-    m_config(opt),
+// ============================================================================
+
+xml_stream_parser::parse_error::parse_error(const string& msg) :
+    m_msg(msg) {}
+
+xml_stream_parser::parse_error::~parse_error() throw() {}
+
+const char* xml_stream_parser::parse_error::what() const throw()
+{
+    return m_msg.c_str();
+}
+
+xml_stream_parser::xml_stream_parser(xmlns_repository& ns_repo, const tokens& tokens, const char* content, size_t size, const string& name) :
     m_ns_cxt(ns_repo.create_context()),
     m_tokens(tokens),
-    mp_handler(nullptr),
+    mp_handler(NULL),
     m_content(content),
-    m_size(size)
+    m_size(size),
+    m_name(name)
 {
 }
 
-xml_stream_parser_base::~xml_stream_parser_base()
+xml_stream_parser::~xml_stream_parser()
 {
 }
-
-void xml_stream_parser_base::set_handler(xml_stream_handler* handler)
-{
-    mp_handler = handler;
-    if (mp_handler)
-    {
-        mp_handler->set_ns_context(&m_ns_cxt);
-        mp_handler->set_config(m_config);
-    }
-}
-
-xml_stream_handler* xml_stream_parser_base::get_handler() const
-{
-    return mp_handler;
-}
-
-xml_stream_parser::xml_stream_parser(
-    const config& opt,
-    xmlns_repository& ns_repo, const tokens& tokens, const char* content, size_t size) :
-    xml_stream_parser_base(opt, ns_repo, tokens, content, size) {}
-
-xml_stream_parser::~xml_stream_parser() {}
 
 void xml_stream_parser::parse()
 {
     if (!mp_handler)
         return;
 
-    sax_token_parser<xml_stream_handler> sax(m_content, m_size, m_tokens, m_ns_cxt, *mp_handler);
+    sax_token_parser<xml_stream_handler, tokens> sax(m_content, m_size, m_tokens, m_ns_cxt, *mp_handler);
     sax.parse();
 }
 
-threaded_xml_stream_parser::threaded_xml_stream_parser(
-    const config& opt,
-    xmlns_repository& ns_repo, const tokens& tokens, const char* content, size_t size) :
-    xml_stream_parser_base(opt, ns_repo, tokens, content, size) {}
-
-threaded_xml_stream_parser::~threaded_xml_stream_parser() {}
-
-void threaded_xml_stream_parser::parse()
+void xml_stream_parser::set_handler(xml_stream_handler* handler)
 {
-    if (!mp_handler)
-        return;
-
-    threaded_sax_token_parser<xml_stream_handler> sax(m_content, m_size, m_tokens, m_ns_cxt, *mp_handler, 1000);
-    sax.parse();
-
-    sax.swap_string_pool(m_pool);
+    mp_handler = handler;
 }
 
-void threaded_xml_stream_parser::swap_string_pool(string_pool& pool)
+xml_stream_handler* xml_stream_parser::get_handler() const
 {
-    m_pool.swap(pool);
+    return mp_handler;
 }
 
 }
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

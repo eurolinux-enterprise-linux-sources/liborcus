@@ -1,12 +1,32 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_ORCUS_XML_MAP_TREE_HPP
-#define INCLUDED_ORCUS_XML_MAP_TREE_HPP
+#ifndef __ORCUS_XML_MAP_TREE_HPP__
+#define __ORCUS_XML_MAP_TREE_HPP__
 
 #include "orcus/pstring.hpp"
 #include "orcus/spreadsheet/types.hpp"
@@ -17,7 +37,9 @@
 
 #include <ostream>
 #include <map>
-#include <vector>
+
+#include <boost/noncopyable.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 
 namespace orcus {
 
@@ -26,10 +48,11 @@ class xmlns_repository;
 /**
  * Tree representing XML-to-sheet mapping for mapped XML import.
  */
-class xml_map_tree
+class xml_map_tree : boost::noncopyable
 {
-public:
+    xml_map_tree(); // disabled
 
+public:
     /**
      * Error indicating improper xpath syntax.
      */
@@ -68,24 +91,20 @@ public:
         element_position();
     };
 
-    struct cell_reference
+    struct cell_reference : boost::noncopyable
     {
         cell_position pos;
-
-        cell_reference(const cell_reference&) = delete;
-        cell_reference& operator=(const cell_reference&) = delete;
-
         cell_reference();
     };
 
     struct element;
     struct linkable;
-    typedef std::vector<std::unique_ptr<element>> element_store_type;
+    typedef boost::ptr_vector<element> element_store_type;
     typedef std::vector<element*> element_list_type;
     typedef std::vector<const element*> const_element_list_type;
     typedef std::vector<const linkable*> const_linkable_list_type;
 
-    struct range_reference
+    struct range_reference : boost::noncopyable
     {
         cell_position pos;
 
@@ -100,9 +119,6 @@ public:
          * label row at the top.
          */
         spreadsheet::row_t row_size;
-
-        range_reference(const range_reference&) = delete;
-        range_reference& operator=(const range_reference&) = delete;
 
         range_reference(const cell_position& _pos);
     };
@@ -119,16 +135,13 @@ public:
     enum reference_type { reference_unknown, reference_cell, reference_range_field };
     enum element_type { element_unknown, element_linked, element_unlinked };
 
-    struct linkable
+    struct linkable : boost::noncopyable
     {
         xmlns_id_t ns;
         pstring name;
         linkable_node_type node_type;
 
         mutable pstring ns_alias; // namespace alias used in the content stream.
-
-        linkable(const linkable&) = delete;
-        linkable& operator=(const linkable&) = delete;
 
         linkable(xmlns_id_t _ns, const pstring& _name, linkable_node_type _node_type);
     };
@@ -145,7 +158,7 @@ public:
         ~attribute();
     };
 
-    typedef std::vector<std::unique_ptr<attribute>> attribute_store_type;
+    typedef boost::ptr_vector<attribute> attribute_store_type;
 
     struct element : public linkable
     {
@@ -164,7 +177,7 @@ public:
 
         /**
          * Points to a range reference instance of which this element is a
-         * parent. nullptr if this element is not a parent element of any range
+         * parent. NULL if this element is not a parent element of any range
          * reference.
          */
         range_reference* range_parent;
@@ -204,10 +217,6 @@ public:
         const element* push_element(xmlns_id_t ns, const pstring& name);
         const element* pop_element(xmlns_id_t ns, const pstring& name);
     };
-
-    xml_map_tree() = delete;
-    xml_map_tree(const xml_map_tree&) = delete;
-    xml_map_tree& operator=(const xml_map_tree&) = delete;
 
     xml_map_tree(xmlns_repository& xmlns_repo);
     ~xml_map_tree();
@@ -264,4 +273,3 @@ bool operator< (const xml_map_tree::cell_position& left, const xml_map_tree::cel
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

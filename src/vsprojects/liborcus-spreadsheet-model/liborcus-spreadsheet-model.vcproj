@@ -174,10 +174,6 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\src\spreadsheet\data_table.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\spreadsheet\document.cpp"
 				>
 			</File>
@@ -195,10 +191,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\spreadsheet\sheet.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\spreadsheet\sheet_properties.cpp"
 				>
 			</File>
 			<File

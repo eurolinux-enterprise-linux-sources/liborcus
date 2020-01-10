@@ -1,25 +1,46 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2011-2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef ORCUS_ORCUS_XLSX_HPP
-#define ORCUS_ORCUS_XLSX_HPP
+#ifndef __ORCUS_ORCUS_XLSX_HPP__
+#define __ORCUS_ORCUS_XLSX_HPP__
 
-#include "interface.hpp"
+#include "env.hpp"
+
+#include <string>
 
 namespace orcus {
 
 namespace spreadsheet { namespace iface { class import_factory; }}
 
 struct xlsx_rel_sheet_info;
-struct xlsx_rel_table_info;
 struct orcus_xlsx_impl;
 class xlsx_opc_handler;
 
-class ORCUS_DLLPUBLIC orcus_xlsx : public iface::import_filter
+class ORCUS_DLLPUBLIC orcus_xlsx
 {
     friend class xlsx_opc_handler;
 
@@ -30,23 +51,16 @@ public:
     orcus_xlsx(spreadsheet::iface::import_factory* factory);
     ~orcus_xlsx();
 
-    static bool detect(const unsigned char* blob, size_t size);
-
-    virtual void read_file(const std::string& filepath);
-    virtual void read_stream(const char* content, size_t len);
-
-    virtual const char* get_name() const;
+    void read_file(const char* fpath);
 
 private:
-
-    void set_formulas_to_doc();
 
     void read_workbook(const std::string& dir_path, const std::string& file_name);
 
     /**
      * Parse a sheet xml part that contains data stored in a single sheet.
      */
-    void read_sheet(const std::string& dir_path, const std::string& file_name, xlsx_rel_sheet_info* data);
+    void read_sheet(const std::string& dir_path, const std::string& file_name, const xlsx_rel_sheet_info* data);
 
     /**
      * Parse sharedStrings.xml part that contains a list of strings referenced
@@ -56,18 +70,6 @@ private:
 
     void read_styles(const std::string& dir_path, const std::string& file_name);
 
-    void read_table(const std::string& dir_path, const std::string& file_name, xlsx_rel_table_info* data);
-
-    void read_pivot_cache_def(const std::string& dir_path, const std::string& file_name);
-
-    void read_pivot_cache_rec(const std::string& dir_path, const std::string& file_name);
-
-    void read_pivot_table(const std::string& dir_path, const std::string& file_name);
-
-    void read_rev_headers(const std::string& dir_path, const std::string& file_name);
-
-    void read_rev_log(const std::string& dir_path, const std::string& file_name);
-
 private:
     orcus_xlsx_impl* mp_impl;
 };
@@ -75,4 +77,3 @@ private:
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

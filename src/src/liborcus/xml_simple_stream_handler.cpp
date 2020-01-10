@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010-2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "xml_simple_stream_handler.hpp"
 #include "xml_context_base.hpp"
@@ -13,18 +33,20 @@
 namespace orcus {
 
 xml_simple_stream_handler::xml_simple_stream_handler(xml_context_base* context) :
-    xml_stream_handler(context)
+    xml_stream_handler(),
+    mp_context(context)
 {
-    assert(context);
+    assert(mp_context);
 }
 
 xml_simple_stream_handler::~xml_simple_stream_handler()
 {
+    delete mp_context;
 }
 
 xml_context_base& xml_simple_stream_handler::get_context()
 {
-    return get_current_context();
+    return *mp_context;
 }
 
 void xml_simple_stream_handler::start_document()
@@ -35,20 +57,19 @@ void xml_simple_stream_handler::end_document()
 {
 }
 
-void xml_simple_stream_handler::start_element(const xml_token_element_t& elem)
+void xml_simple_stream_handler::start_element(const sax_token_parser_element& elem)
 {
-    get_current_context().start_element(elem.ns, elem.name, elem.attrs);
+    mp_context->start_element(elem.ns, elem.name, elem.attrs);
 }
 
-void xml_simple_stream_handler::end_element(const xml_token_element_t& elem)
+void xml_simple_stream_handler::end_element(const sax_token_parser_element& elem)
 {
-    get_current_context().end_element(elem.ns, elem.name);
+    mp_context->end_element(elem.ns, elem.name);
 }
 
-void xml_simple_stream_handler::characters(const pstring& str, bool transient)
+void xml_simple_stream_handler::characters(const pstring& str)
 {
-    get_current_context().characters(str, transient);
+    mp_context->characters(str);
 }
 
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

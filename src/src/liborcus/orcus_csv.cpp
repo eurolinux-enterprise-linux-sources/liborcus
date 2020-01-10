@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2011-2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/orcus_csv.hpp"
 
@@ -26,7 +46,7 @@ class csv_handler
 {
 public:
     csv_handler(spreadsheet::iface::import_factory& factory) :
-        m_factory(factory), mp_sheet(nullptr), m_row(0), m_col(0) {}
+        m_factory(factory), mp_sheet(NULL), m_row(0), m_col(0) {}
 
     void begin_parse()
     {
@@ -60,45 +80,31 @@ private:
 
 orcus_csv::orcus_csv(spreadsheet::iface::import_factory* factory) : mp_factory(factory) {}
 
-void orcus_csv::read_file(const string& filepath)
+void orcus_csv::read_file(const char* filepath)
 {
-    string strm = load_file_content(filepath.c_str());
-    parse(&strm[0], strm.size());
+    cout << "reading " << filepath << endl;
+    string strm;
+    load_file_content(filepath, strm);
+    parse(strm);
 
     mp_factory->finalize();
 }
 
-void orcus_csv::read_stream(const char* content, size_t len)
+void orcus_csv::parse(const string& strm)
 {
-    if (!content)
-        return;
-
-    parse(content, len);
-
-    mp_factory->finalize();
-}
-
-const char* orcus_csv::get_name() const
-{
-    static const char* name = "csv";
-    return name;
-}
-
-void orcus_csv::parse(const char* content, size_t len)
-{
-    if (!len)
+    if (strm.empty())
         return;
 
     csv_handler handler(*mp_factory);
-    csv::parser_config config;
+    csv_parser_config config;
     config.delimiters.push_back(',');
     config.text_qualifier = '"';
-    csv_parser<csv_handler> parser(content, len, handler, config);
+    csv_parser<csv_handler> parser(&strm[0], strm.size(), handler, config);
     try
     {
         parser.parse();
     }
-    catch (const csv::parse_error& e)
+    catch (const csv_parse_error& e)
     {
         cout << "parse failed: " << e.what() << endl;
     }
@@ -106,4 +112,3 @@ void orcus_csv::parse(const char* content, size_t len)
 
 }
 
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

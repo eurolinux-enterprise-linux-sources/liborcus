@@ -1,20 +1,38 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/xml_namespace.hpp"
 #include "orcus/exception.hpp"
 #include "orcus/string_pool.hpp"
 
-#include <unordered_map>
+#include <boost/unordered_map.hpp>
 #include <vector>
 #include <limits>
 #include <sstream>
-#include <algorithm>
-#include <cassert>
 
 #define ORCUS_DEBUG_XML_NAMESPACE 0
 
@@ -50,7 +68,7 @@ void print_map_keys(const _MapType& map_store)
 
 }
 
-typedef std::unordered_map<pstring, size_t, pstring::hash> strid_map_type;
+typedef boost::unordered_map<pstring, size_t, pstring::hash> strid_map_type;
 
 struct xmlns_repository_impl
 {
@@ -177,7 +195,7 @@ size_t xmlns_repository::get_index(xmlns_id_t ns_id) const
 }
 
 typedef std::vector<xmlns_id_t> xmlns_list_type;
-typedef std::unordered_map<pstring, xmlns_list_type, pstring::hash> alias_map_type;
+typedef boost::unordered_map<pstring, xmlns_list_type, pstring::hash> alias_map_type;
 
 struct xmlns_context_impl
 {
@@ -310,22 +328,6 @@ string xmlns_context::get_short_name(xmlns_id_t ns_id) const
     return mp_impl->m_repo.get_short_name(ns_id);
 }
 
-pstring xmlns_context::get_alias(xmlns_id_t ns_id) const
-{
-    alias_map_type::const_iterator it = mp_impl->m_map.begin(), it_end = mp_impl->m_map.end();
-    for (; it != it_end; ++it)
-    {
-        const xmlns_list_type& lst = it->second;
-        if (lst.empty())
-            continue;
-
-        if (lst.back() == ns_id)
-            return it->first;
-    }
-
-    return pstring();
-}
-
 namespace {
 
 #if ORCUS_DEBUG_XML_NAMESPACE
@@ -432,4 +434,3 @@ void xmlns_context::dump(std::ostream& os) const
 }
 
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

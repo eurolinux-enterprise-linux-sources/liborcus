@@ -1,5 +1,5 @@
 
-AM_CPPFLAGS = -I$(top_srcdir)/include -D__ORCUS_MSO_BUILDING_DLL
+INCLUDES = -I$(top_srcdir)/include
 
 lib_LTLIBRARIES = liborcus-mso-@ORCUS_API_VERSION@.la
 liborcus_mso_@ORCUS_API_VERSION@_la_SOURCES = \

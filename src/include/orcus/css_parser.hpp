@@ -1,30 +1,59 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2011 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_ORCUS_CSS_PARSER_HPP
-#define INCLUDED_ORCUS_CSS_PARSER_HPP
+#ifndef __ORCUS_CSS_PARSER_HPP__
+#define __ORCUS_CSS_PARSER_HPP__
 
 #define ORCUS_DEBUG_CSS 0
 
-#include "parser_global.hpp"
-#include "css_parser_base.hpp"
-
+#include <cstdlib>
+#include <cstring>
+#include <exception>
+#include <string>
 #include <cassert>
+#include <sstream>
 
 #if ORCUS_DEBUG_CSS
 #include <iostream>
-using std::cout;
-using std::endl;
 #endif
 
 namespace orcus {
 
+class css_parse_error : public std::exception
+{
+    std::string m_msg;
+public:
+    css_parse_error(const std::string& msg) : m_msg(msg) {}
+    virtual ~css_parse_error() throw() {}
+    virtual const char* what() const throw() { return m_msg.c_str(); }
+};
+
 template<typename _Handler>
-class css_parser : public css::parser_base
+class css_parser
 {
 public:
     typedef _Handler handler_type;
@@ -39,25 +68,67 @@ private:
     // non-blank character when it finishes.
     void rule();
     void at_rule_name();
-    void simple_selector_name();
+    void selector_name();
     void property_name();
     void property();
     void quoted_value();
     void value();
-    void function_value(const char* p, size_t len);
-    void function_rgb(bool alpha);
-    void function_hsl(bool alpha);
-    void function_url();
     void name_sep();
     void property_sep();
     void block();
 
+    void identifier(const char*& p, size_t& len);
+
+    void skip_blanks();
+    void skip_blanks_reverse();
+    void shrink_stream();
+    void next();
+    char cur_char() const;
+
+    size_t remaining_size() const { return m_length - m_pos - 1; }
+    bool has_char() const { return m_pos < m_length; }
+
+    static bool is_blank(char c)
+    {
+        return c == ' ' || c == '\t' || c == '\n';
+    }
+
+    static bool is_alpha(char c)
+    {
+        if ('a' <= c && c <= 'z')
+            return true;
+        if ('A' <= c && c <= 'Z')
+            return true;
+        return false;
+    }
+
+    static bool is_name_char(char c)
+    {
+        switch (c)
+        {
+            case '-':
+                return true;
+        }
+
+        return false;
+    }
+
+    static bool is_numeric(char c)
+    {
+        if ('0' <= c && c <= '9')
+            return true;
+        return false;
+    }
+
     handler_type& m_handler;
+    const char* mp_char;
+    size_t m_pos;
+    size_t m_length;
 };
 
 template<typename _Handler>
 css_parser<_Handler>::css_parser(const char* p, size_t n, handler_type& hdl) :
-    css::parser_base(p, n), m_handler(hdl) {}
+    m_handler(hdl), mp_char(p), m_pos(0), m_length(n) {}
 
 template<typename _Handler>
 void css_parser<_Handler>::parse()
@@ -67,7 +138,7 @@ void css_parser<_Handler>::parse()
 #if ORCUS_DEBUG_CSS
     std::cout << "compressed: '";
     const char* p = mp_char;
-    for (; p != mp_end; ++p)
+    for (size_t i = m_pos; i < m_length; ++i, ++p)
         std::cout << *p;
     std::cout << "'" << std::endl;
 #endif
@@ -83,38 +154,24 @@ void css_parser<_Handler>::rule()
     // <selector name> , ... , <selector name> <block>
     while (has_char())
     {
-        if (skip_comment())
-            continue;
-
         char c = cur_char();
-        if (is_alpha(c))
+        if (is_alpha(c) || c == '.' || c == '@')
         {
-            simple_selector_name();
-            continue;
+            selector_name();
         }
-
-        switch (c)
+        else if (c == ',')
         {
-            case '>':
-                set_combinator(c, css::combinator_t::direct_child);
-            break;
-            case '+':
-                set_combinator(c, css::combinator_t::next_sibling);
-            break;
-            case '.':
-            case '#':
-            case '@':
-                simple_selector_name();
-            break;
-            case ',':
-                name_sep();
-            break;
-            case '{':
-                reset_before_block();
-                block();
-            break;
-            default:
-                css::parse_error::throw_with("rule: failed to parse '", c, "'");
+            name_sep();
+        }
+        else if (c == '{')
+        {
+            block();
+        }
+        else
+        {
+            std::ostringstream os;
+            os << "failed to parse '" << c << "'";
+            throw css_parse_error(os.str());
         }
     }
 }
@@ -127,7 +184,7 @@ void css_parser<_Handler>::at_rule_name()
     next();
     char c = cur_char();
     if (!is_alpha(c))
-        throw css::parse_error("at_rule_name: first character of an at-rule name must be an alphabet.");
+        throw css_parse_error("first character of an at-rule name must be an alphabet.");
 
     const char* p;
     size_t len;
@@ -142,8 +199,14 @@ void css_parser<_Handler>::at_rule_name()
 }
 
 template<typename _Handler>
-void css_parser<_Handler>::simple_selector_name()
+void css_parser<_Handler>::selector_name()
 {
+    // <element name>
+    // '.' <class name>
+    // <element name> '.' <class name>
+    //
+    // Both element and class names are identifiers.
+
     assert(has_char());
     char c = cur_char();
     if (c == '@')
@@ -153,101 +216,27 @@ void css_parser<_Handler>::simple_selector_name()
         return;
     }
 
-    if (m_simple_selector_count)
+    if (!is_alpha(c) && c != '.')
+        throw css_parse_error("first character of a name must be an alphabet or a dot.");
+
+    const char* p_elem = NULL;
+    const char* p_class = NULL;
+    size_t len_elem = 0;
+    size_t len_class = 0;
+    if (c != '.')
+        identifier(p_elem, len_elem);
+
+    if (cur_char() == '.')
     {
-#if ORCUS_DEBUG_CSS
-    cout << "combinator: " << m_combinator << endl;
-#endif
-        m_handler.combinator(m_combinator);
-        m_combinator = css::combinator_t::descendant;
+        next();
+        identifier(p_class, len_class);
     }
-    assert(is_alpha(c) || c == '.' || c == '#');
+    skip_blanks();
 
-    const char* p = nullptr;
-    size_t n = 0;
-
+    m_handler.selector_name(p_elem, len_elem, p_class, len_class);
 #if ORCUS_DEBUG_CSS
-    cout << "simple_selector_name: (" << m_simple_selector_count << ")";
-#endif
-
-    if (c != '.' && c != '#')
-    {
-        identifier(p, n);
-#if ORCUS_DEBUG_CSS
-        std::string s(p, n);
-        cout << " type=" << s;
-#endif
-        m_handler.simple_selector_type(p, n);
-    }
-
-    bool in_loop = true;
-    while (in_loop && has_char())
-    {
-        switch (cur_char())
-        {
-            case '.':
-            {
-                next();
-                identifier(p, n);
-                m_handler.simple_selector_class(p, n);
-#if ORCUS_DEBUG_CSS
-                std::string s(p, n);
-                std::cout << " class=" << s;
-#endif
-            }
-            break;
-            case '#':
-            {
-                next();
-                identifier(p, n);
-                m_handler.simple_selector_id(p, n);
-#if ORCUS_DEBUG_CSS
-                std::string s(p, n);
-                std::cout << " id=" << s;
-#endif
-            }
-            break;
-            case ':':
-            {
-                // This could be either a pseudo element or pseudo class.
-                next();
-                if (cur_char() == ':')
-                {
-                    // pseudo element.
-                    next();
-                    identifier(p, n);
-                    css::pseudo_element_t elem = css::to_pseudo_element(p, n);
-                    if (!elem)
-                        css::parse_error::throw_with(
-                            "selector_name: unknown pseudo element '", p, n, "'");
-
-                    m_handler.simple_selector_pseudo_element(elem);
-                }
-                else
-                {
-                    // pseudo class (or pseudo element in the older version of CSS).
-                    identifier(p, n);
-                    css::pseudo_class_t pc = css::to_pseudo_class(p, n);
-                    if (!pc)
-                        css::parse_error::throw_with(
-                            "selector_name: unknown pseudo class '", p, n, "'");
-
-                    m_handler.simple_selector_pseudo_class(pc);
-                }
-            }
-            break;
-            default:
-                in_loop = false;
-        }
-    }
-
-    m_handler.end_simple_selector();
-    skip_comments_and_blanks();
-
-    ++m_simple_selector_count;
-
-#if ORCUS_DEBUG_CSS
-    std::cout << std::endl;
+    std::string elem_name(p_elem, len_elem), class_name(p_class, len_class);
+    std::cout << "selector name: (element)'" << elem_name.c_str() << "' (class)'" << class_name.c_str() << "'" << std::endl;
 #endif
 }
 
@@ -259,13 +248,12 @@ void css_parser<_Handler>::property_name()
     assert(has_char());
     char c = cur_char();
     if (!is_alpha(c) && c != '.')
-        css::parse_error::throw_with(
-            "property_name: first character of a name must be an alphabet or a dot, but found '", c, "'");
+        throw css_parse_error("first character of a name must be an alphabet or a dot.");
 
     const char* p;
     size_t len;
     identifier(p, len);
-    skip_comments_and_blanks();
+    skip_blanks();
 
     m_handler.property_name(p, len);
 #if ORCUS_DEBUG_CSS
@@ -282,34 +270,23 @@ void css_parser<_Handler>::property()
     m_handler.begin_property();
     property_name();
     if (cur_char() != ':')
-        throw css::parse_error("property: ':' expected.");
+        throw css_parse_error("':' expected.");
     next();
-    skip_comments_and_blanks();
-
-    bool in_loop = true;
-    while (in_loop && has_char())
+    skip_blanks();
+    while (has_char())
     {
         value();
         char c = cur_char();
-        switch (c)
+        if (c == ',')
         {
-            case ',':
-            {
-                // separated by commas.
-                next();
-                skip_comments_and_blanks();
-            }
-            break;
-            case ';':
-            case '}':
-                in_loop = false;
-            break;
-            default:
-                ;
+            // separated by commas.
+            next();
+            skip_blanks();
         }
+        else if (c == ';')
+            break;
     }
-
-    skip_comments_and_blanks();
+    skip_blanks();
     m_handler.end_property();
 }
 
@@ -317,9 +294,24 @@ template<typename _Handler>
 void css_parser<_Handler>::quoted_value()
 {
     // Parse until the the end quote is reached.
-    const char* p = nullptr;
-    size_t len = 0;
-    literal(p, len, '"');
+
+    assert(cur_char() == '"');
+    next();
+    const char* p = mp_char;
+    size_t len = 1;
+    for (next(); has_char(); next())
+    {
+        if (cur_char() == '"')
+        {
+            // End quote reached.
+            break;
+        }
+        ++len;
+    }
+
+    if (cur_char() != '"')
+        throw css_parse_error("end quote has never been reached.");
+
     next();
     skip_blanks();
 
@@ -341,205 +333,28 @@ void css_parser<_Handler>::value()
         return;
     }
 
-    if (!is_alpha(c) && !is_numeric(c) && !is_in(c, "-+.#"))
-        css::parse_error::throw_with("value:: illegal first character of a value '", c, "'");
-
-    const char* p = nullptr;
-    size_t len = 0;
-    identifier(p, len, ".%");
-    if (cur_char() == '(')
+    if (!is_alpha(c) && !is_numeric(c) && c != '-' && c != '+' && c != '.')
     {
-        function_value(p, len);
-        return;
+        std::ostringstream os;
+        os << "illegal first character of a value '" << c << "'";
+        throw css_parse_error(os.str());
     }
 
+    const char* p = mp_char;
+    size_t len = 1;
+    for (next(); has_char(); next())
+    {
+        c = cur_char();
+        if (!is_alpha(c) && !is_name_char(c) && !is_numeric(c) && c != '.')
+            break;
+        ++len;
+    }
+    skip_blanks();
+
     m_handler.value(p, len);
-
-    skip_comments_and_blanks();
-
 #if ORCUS_DEBUG_CSS
     std::string foo(p, len);
     std::cout << "value: " << foo.c_str() << std::endl;
-#endif
-}
-
-template<typename _Handler>
-void css_parser<_Handler>::function_value(const char* p, size_t len)
-{
-    assert(cur_char() == '(');
-    css::property_function_t func = css::to_property_function(p, len);
-    if (func == css::property_function_t::unknown)
-        css::parse_error::throw_with("function_value: unknown function '", p, len, "'");
-
-    // Move to the first character of the first argument.
-    next();
-    skip_comments_and_blanks();
-
-    switch (func)
-    {
-        case css::property_function_t::rgb:
-            function_rgb(false);
-        break;
-        case css::property_function_t::rgba:
-            function_rgb(true);
-        break;
-        case css::property_function_t::hsl:
-            function_hsl(false);
-        break;
-        case css::property_function_t::hsla:
-            function_hsl(true);
-        break;
-        case css::property_function_t::url:
-            function_url();
-        break;
-        default:
-            css::parse_error::throw_with("function_value: unhandled function '", p, len, "'");
-    }
-
-    char c = cur_char();
-    if (c != ')')
-        css::parse_error::throw_with("function_value: ')' expected but '", c, "' found.");
-
-    next();
-    skip_comments_and_blanks();
-}
-
-template<typename _Handler>
-void css_parser<_Handler>::function_rgb(bool alpha)
-{
-    // rgb(num, num, num)  rgba(num, num, num, float)
-
-    uint8_t vals[3];
-    uint8_t* p = vals;
-    const uint8_t* plast = p + 2;
-    char c = 0;
-
-    for (; ; ++p)
-    {
-        *p = parse_uint8();
-
-        skip_comments_and_blanks();
-
-        if (p == plast)
-            break;
-
-        c = cur_char();
-
-        if (c != ',')
-            css::parse_error::throw_with("function_rgb: ',' expected but '", c, "' found.");
-
-        next();
-        skip_comments_and_blanks();
-    }
-
-    if (alpha)
-    {
-        c = cur_char();
-        if (c != ',')
-            css::parse_error::throw_with("function_rgb: ',' expected but '", c, "' found.");
-
-        next();
-        skip_comments_and_blanks();
-
-        double alpha_val = parse_double_or_throw();
-
-        alpha_val = clip(alpha_val, 0.0, 1.0);
-        m_handler.rgba(vals[0], vals[1], vals[2], alpha_val);
-    }
-    else
-        m_handler.rgb(vals[0], vals[1], vals[2]);
-
-#if ORCUS_DEBUG_CSS
-    std::cout << "rgb";
-    if (alpha)
-        std::cout << 'a';
-    std::cout << '(';
-    p = vals;
-    const uint8_t* pend = plast + 1;
-    for (; p != pend; ++p)
-        std::cout << ' ' << (int)*p;
-    std::cout << " )" << std::endl;
-#endif
-}
-
-template<typename _Handler>
-void css_parser<_Handler>::function_hsl(bool alpha)
-{
-    // hsl(num, percent, percent)  hsla(num, percent, percent, float)
-
-    double hue = parse_double_or_throw(); // casted to uint8_t eventually.
-    hue = clip(hue, 0.0, 360.0);
-    skip_comments_and_blanks();
-
-    char c = cur_char();
-    if (c != ',')
-        css::parse_error::throw_with("function_hsl: ',' expected but '", c, "' found.");
-
-    next();
-    skip_comments_and_blanks();
-
-    double sat = parse_percent();
-    sat = clip(sat, 0.0, 100.0);
-    skip_comments_and_blanks();
-
-    c = cur_char();
-    if (c != ',')
-        css::parse_error::throw_with("function_hsl: ',' expected but '", c, "' found.");
-
-    next();
-    skip_comments_and_blanks();
-
-    double light = parse_percent();
-    light = clip(light, 0.0, 100.0);
-    skip_comments_and_blanks();
-
-    if (!alpha)
-    {
-        m_handler.hsl(hue, sat, light);
-        return;
-    }
-
-    c = cur_char();
-    if (c != ',')
-        css::parse_error::throw_with("function_hsl: ',' expected but '", c, "' found.");
-
-    next();
-    skip_comments_and_blanks();
-
-    double alpha_val = parse_double_or_throw();
-    alpha_val = clip(alpha_val, 0.0, 1.0);
-    skip_comments_and_blanks();
-    m_handler.hsla(hue, sat, light, alpha_val);
-}
-
-template<typename _Handler>
-void css_parser<_Handler>::function_url()
-{
-    char c = cur_char();
-
-    if (c == '"' || c == '\'')
-    {
-        // Quoted URL value.
-        const char* p;
-        size_t len;
-        literal(p, len, c);
-        next();
-        skip_comments_and_blanks();
-        m_handler.url(p, len);
-#if ORCUS_DEBUG_CSS
-        std::cout << "url(" << std::string(p, len) << ")" << std::endl;
-#endif
-        return;
-    }
-
-    // Unquoted URL value.
-    const char* p;
-    size_t len;
-    skip_to_or_blank(p, len, ")");
-    skip_comments_and_blanks();
-    m_handler.url(p, len);
-#if ORCUS_DEBUG_CSS
-    std::cout << "url(" << std::string(p, len) << ")" << std::endl;
 #endif
 }
 
@@ -552,7 +367,6 @@ void css_parser<_Handler>::name_sep()
 #endif
     next();
     skip_blanks();
-    m_handler.end_selector();
 }
 
 template<typename _Handler>
@@ -562,7 +376,7 @@ void css_parser<_Handler>::property_sep()
     std::cout << ";" << std::endl;
 #endif
     next();
-    skip_comments_and_blanks();
+    skip_blanks();
 }
 
 template<typename _Handler>
@@ -574,11 +388,10 @@ void css_parser<_Handler>::block()
 #if ORCUS_DEBUG_CSS
     std::cout << "{" << std::endl;
 #endif
-    m_handler.end_selector();
     m_handler.begin_block();
 
     next();
-    skip_comments_and_blanks();
+    skip_blanks();
 
     // parse properties.
     while (has_char())
@@ -593,20 +406,117 @@ void css_parser<_Handler>::block()
     }
 
     if (cur_char() != '}')
-        throw css::parse_error("block: '}' expected.");
+        throw css_parse_error("} expected.");
 
     m_handler.end_block();
 
     next();
-    skip_comments_and_blanks();
+    skip_blanks();
 
 #if ORCUS_DEBUG_CSS
     std::cout << "}" << std::endl;
 #endif
 }
 
+template<typename _Handler>
+void css_parser<_Handler>::identifier(const char*& p, size_t& len)
+{
+    p = mp_char;
+    len = 1;
+    for (next(); has_char(); next())
+    {
+        char c = cur_char();
+        if (!is_alpha(c) && !is_name_char(c) && !is_numeric(c))
+            break;
+        ++len;
+    }
+}
+
+template<typename _Handler>
+void css_parser<_Handler>::skip_blanks()
+{
+    for (; has_char(); next())
+    {
+        if (!is_blank(*mp_char))
+            break;
+    }
+}
+
+template<typename _Handler>
+void css_parser<_Handler>::skip_blanks_reverse()
+{
+    const char* p = mp_char + remaining_size();
+    for (; p != mp_char; --p, --m_length)
+    {
+        if (!is_blank(*p))
+            break;
+    }
+}
+
+template<typename _Handler>
+void css_parser<_Handler>::shrink_stream()
+{
+    // Skip any leading blanks.
+    skip_blanks();
+
+    if (!remaining_size())
+        return;
+
+    // Skip any trailing blanks.
+    skip_blanks_reverse();
+
+    // Skip leading <!-- if present.
+
+    const char* com_open = "<!--";
+    size_t com_open_len = std::strlen(com_open);
+    if (remaining_size() < com_open_len)
+        // Not enough stream left.  Bail out.
+        return;
+
+    const char* p = mp_char;
+    for (size_t i = 0; i < com_open_len; ++i, ++p)
+    {
+        if (*p != com_open[i])
+            return;
+        next();
+    }
+    mp_char = p;
+
+    // Skip leading blanks once again.
+    skip_blanks();
+
+    // Skip trailing --> if present.
+    const char* com_close = "-->";
+    size_t com_close_len = std::strlen(com_close);
+    size_t n = remaining_size();
+    if (n < com_close_len)
+        // Not enough stream left.  Bail out.
+        return;
+
+    p = mp_char + n; // move to the last char.
+    for (size_t i = com_close_len; i > 0; --i, --p)
+    {
+        if (*p != com_close[i-1])
+            return;
+    }
+    m_length -= com_close_len;
+
+    skip_blanks_reverse();
+}
+
+template<typename _Handler>
+void css_parser<_Handler>::next()
+{
+    ++m_pos;
+    ++mp_char;
+}
+
+template<typename _Handler>
+char css_parser<_Handler>::cur_char() const
+{
+    return *mp_char;
+}
+
 }
 
 #endif
-
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

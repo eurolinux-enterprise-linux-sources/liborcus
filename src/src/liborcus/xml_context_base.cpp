@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "xml_context_base.hpp"
 #include "orcus/exception.hpp"
@@ -18,7 +38,7 @@ namespace orcus {
 
 namespace {
 
-void print_stack(const tokens& tokens, const xml_elem_stack_t& elem_stack, const xmlns_context* ns_cxt)
+void print_stack(const tokens& tokens, const xml_elem_stack_t& elem_stack)
 {
     cerr << "[ ";
     xml_elem_stack_t::const_iterator itr, itr_beg = elem_stack.begin(), itr_end = elem_stack.end();
@@ -26,50 +46,18 @@ void print_stack(const tokens& tokens, const xml_elem_stack_t& elem_stack, const
     {
         if (itr != itr_beg)
             cerr << " -> ";
-
-        xmlns_id_t ns = itr->first;
-        if (ns_cxt)
-        {
-            pstring alias = ns_cxt->get_alias(ns);
-            if (!alias.empty())
-                cerr << alias << ":";
-        }
-        else
-            cerr << ns << ":";
-
-        cerr << tokens.get_token_name(itr->second);
+        cerr << itr->first << ":" << tokens.get_token_name(itr->second);
     }
     cerr << " ]";
 }
 
 }
 
-xml_context_base::xml_context_base(session_context& session_cxt, const tokens& tokens) :
-    mp_ns_cxt(nullptr), m_session_cxt(session_cxt), m_tokens(tokens) {}
+xml_context_base::xml_context_base(const tokens& tokens) :
+    m_tokens(tokens) {}
 
 xml_context_base::~xml_context_base()
 {
-}
-
-void xml_context_base::set_ns_context(const xmlns_context* p)
-{
-    mp_ns_cxt = p;
-}
-
-void xml_context_base::set_config(const config& opt)
-{
-    m_config = opt;
-}
-
-void xml_context_base::transfer_common(const xml_context_base& parent)
-{
-    m_config = parent.m_config;
-    mp_ns_cxt = parent.mp_ns_cxt;
-}
-
-session_context& xml_context_base::get_session_context()
-{
-    return m_session_cxt;
 }
 
 const tokens& xml_context_base::get_tokens() const
@@ -127,29 +115,20 @@ const xml_token_pair_t& xml_context_base::get_parent_element() const
 
 void xml_context_base::warn_unhandled() const
 {
-    if (!m_config.debug)
-        return;
-
     cerr << "warning: unhandled element ";
-    print_stack(m_tokens, m_stack, mp_ns_cxt);
+    print_stack(m_tokens, m_stack);
     cerr << endl;
 }
 
 void xml_context_base::warn_unexpected() const
 {
-    if (!m_config.debug)
-        return;
-
     cerr << "warning: unexpected element ";
-    print_stack(m_tokens, m_stack, mp_ns_cxt);
+    print_stack(m_tokens, m_stack);
     cerr << endl;
 }
 
 void xml_context_base::warn(const char* msg) const
 {
-    if (!m_config.debug)
-        return;
-
     cerr << "warning: " << msg << endl;
 }
 
@@ -157,9 +136,7 @@ void xml_context_base::xml_element_expected(
     const xml_token_pair_t& elem, xmlns_id_t ns, xml_token_t name,
     const string* error)
 {
-    if (!m_config.structure_check)
-        return;
-
+#ifndef NO_XML_EXPECTED
     if (elem.first == ns && elem.second == name)
         // This is an expected element.  Good.
         return;
@@ -174,14 +151,13 @@ void xml_context_base::xml_element_expected(
     os << "element '" << ns << ":" << m_tokens.get_token_name(name) << "' expected, but '";
     os << elem.first << ":" << m_tokens.get_token_name(elem.second) << "' encountered.";
     throw xml_structure_error(os.str());
+#endif
 }
 
 void xml_context_base::xml_element_expected(
     const xml_token_pair_t& elem, const xml_elem_stack_t& expected_elems)
 {
-    if (!m_config.structure_check)
-        return;
-
+#ifndef NO_XML_EXPECTED
     xml_elem_stack_t::const_iterator itr = expected_elems.begin(), itr_end = expected_elems.end();
     for (; itr != itr_end; ++itr)
     {
@@ -193,12 +169,7 @@ void xml_context_base::xml_element_expected(
     ostringstream os;
     os << "unexpected element encountered: " << elem.first << ":" << m_tokens.get_token_name(elem.second);
     throw xml_structure_error(os.str());
-}
-
-const config& xml_context_base::get_config() const
-{
-    return m_config;
+#endif
 }
 
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

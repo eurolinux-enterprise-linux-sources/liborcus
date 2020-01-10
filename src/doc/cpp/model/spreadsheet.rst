@@ -1,4 +1,0 @@
-
-Spreadsheet Document
-====================
-

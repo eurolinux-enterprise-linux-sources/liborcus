@@ -1,30 +1,66 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_ORCUS_STRING_POOL_HPP
-#define INCLUDED_ORCUS_STRING_POOL_HPP
+#ifndef __ORCUS_STRING_POOL_HPP__
+#define __ORCUS_STRING_POOL_HPP__
+
+#include <string>
+#include <boost/unordered_set.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "env.hpp"
 #include "pstring.hpp"
-
-#include <string>
-#include <memory>
 
 namespace orcus {
 
 /**
  * Implements string hash map.
  */
-class ORCUS_PSR_DLLPUBLIC string_pool
+class ORCUS_DLLPUBLIC string_pool
 {
-public:
-    string_pool(const string_pool&) = delete;
-    string_pool& operator=(const string_pool&) = delete;
+    struct string_hash
+    {
+        size_t operator() (const std::string* p) const;
+    private:
+        boost::hash<std::string> m_hash;
+    };
 
+    struct string_equal_to
+    {
+        bool operator() (const std::string* p1, const std::string* p2) const;
+    private:
+        std::equal_to<std::string> m_equal_to;
+    };
+
+    typedef boost::unordered_set<pstring, pstring::hash> string_set_type;
+    typedef boost::ptr_vector<std::string> string_store_type;
+
+public:
     string_pool();
     ~string_pool();
 
@@ -63,25 +99,11 @@ public:
     void clear();
     size_t size() const;
 
-    void swap(string_pool& other);
-
-    /**
-     * Merge another string pool instance in.  This will not invalidate any
-     * string references to the other pool.
-     *
-     * The other string pool instance will become empty when this call
-     * returns.
-     *
-     * @param other string pool instance to merge in.
-     */
-    void merge(string_pool& other);
-
 private:
-    struct impl;
-    std::unique_ptr<impl> mp_impl;
+    string_set_type m_set;
+    string_store_type m_store;
 };
 
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

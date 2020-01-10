@@ -1,84 +1,46 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/dom_tree.hpp"
 #include "orcus/exception.hpp"
 #include "orcus/xml_namespace.hpp"
-#include "orcus/global.hpp"
-#include "orcus/sax_ns_parser.hpp"
 
 #include "orcus/string_pool.hpp"
 
 #include <iostream>
 #include <sstream>
-#include <cassert>
-#include <unordered_map>
-#include <vector>
-#include <algorithm>
+
+#include <boost/noncopyable.hpp>
 
 using namespace std;
 
 namespace orcus {
 
 namespace {
-
-class sax_handler
-{
-    sax::doctype_declaration m_dtd;
-    dom_tree m_tree;
-
-public:
-    sax_handler(xmlns_context& cxt) : m_tree(cxt) {}
-
-    void doctype(const sax::doctype_declaration& dtd)
-    {
-        m_tree.set_doctype(dtd);
-    }
-
-    void start_declaration(const pstring& name)
-    {
-        m_tree.start_declaration(name);
-    }
-
-    void end_declaration(const pstring& name)
-    {
-        m_tree.end_declaration(name);
-    }
-
-    void start_element(const sax_ns_parser_element& elem)
-    {
-        m_tree.start_element(elem.ns, elem.name);
-    }
-
-    void end_element(const sax_ns_parser_element& elem)
-    {
-        m_tree.end_element(elem.ns, elem.name);
-    }
-
-    void characters(const pstring& val, bool)
-    {
-        m_tree.set_characters(val);
-    }
-
-    void attribute(const pstring& name, const pstring& val)
-    {
-        m_tree.set_attribute(XMLNS_UNKNOWN_ID, name, val);
-    }
-
-    void attribute(const sax_ns_parser_attribute& attr)
-    {
-        m_tree.set_attribute(attr.ns, attr.name, attr.value);
-    }
-
-    void swap(dom_tree& other)
-    {
-        m_tree.swap(other);
-    }
-};
 
 /**
  * Escape certain characters with backslash (\).
@@ -101,8 +63,6 @@ void escape(ostream& os, const pstring& val)
     }
 }
 
-typedef std::unordered_map<pstring, dom_tree::attrs_type, pstring::hash> declarations_type;
-
 }
 
 struct dom_tree_impl
@@ -110,16 +70,12 @@ struct dom_tree_impl
     xmlns_context& m_ns_cxt;
     string_pool m_pool;
 
-    std::unique_ptr<sax::doctype_declaration> m_doctype;
-
-    pstring m_cur_decl_name;
-    declarations_type m_decls;
     dom_tree::attrs_type m_doc_attrs;
     dom_tree::attrs_type m_cur_attrs;
     dom_tree::element_stack_type m_elem_stack;
     dom_tree::element* m_root;
 
-    dom_tree_impl(xmlns_context& cxt) : m_ns_cxt(cxt), m_root(nullptr) {}
+    dom_tree_impl(xmlns_context& cxt) : m_ns_cxt(cxt), m_root(NULL) {}
 
     ~dom_tree_impl()
     {
@@ -156,7 +112,7 @@ void dom_tree::attr::print(std::ostream& os, const xmlns_context& cxt) const
 
 dom_tree::node::~node() {}
 
-dom_tree::element::element(xmlns_id_t _ns, const pstring& _name) : node(node_type::element), name(_ns, _name) {}
+dom_tree::element::element(xmlns_id_t _ns, const pstring& _name) : node(node_element), name(_ns, _name) {}
 
 void dom_tree::element::print(ostream& os, const xmlns_context& cxt) const
 {
@@ -165,7 +121,7 @@ void dom_tree::element::print(ostream& os, const xmlns_context& cxt) const
 
 dom_tree::element::~element() {}
 
-dom_tree::content::content(const pstring& _value) : node(node_type::content), value(_value) {}
+dom_tree::content::content(const pstring& _value) : node(node_content), value(_value) {}
 
 void dom_tree::content::print(ostream& os, const xmlns_context& /*cxt*/) const
 {
@@ -176,52 +132,13 @@ void dom_tree::content::print(ostream& os, const xmlns_context& /*cxt*/) const
 
 dom_tree::content::~content() {}
 
-dom_tree::dom_tree(xmlns_context& cxt) :
-    mp_impl(orcus::make_unique<dom_tree_impl>(cxt)) {}
+dom_tree::dom_tree(xmlns_context& cxt) : mp_impl(new dom_tree_impl(cxt)) {}
 
-dom_tree::~dom_tree() {}
+dom_tree::~dom_tree() { delete mp_impl; }
 
-void dom_tree::load(const std::string& strm)
+void dom_tree::end_declaration()
 {
-    sax_handler hdl(mp_impl->m_ns_cxt);
-    sax_ns_parser<sax_handler> parser(
-        strm.c_str(), strm.size(), mp_impl->m_ns_cxt, hdl);
-    parser.parse();
-
-    hdl.swap(*this);
-}
-
-void dom_tree::swap(dom_tree& other)
-{
-    mp_impl.swap(other.mp_impl);
-}
-
-void dom_tree::start_declaration(const pstring& name)
-{
-    mp_impl->m_cur_decl_name = name;
-}
-
-void dom_tree::end_declaration(const pstring& name)
-{
-    assert(mp_impl->m_cur_decl_name == name);
-    declarations_type& decls = mp_impl->m_decls;
-    declarations_type::iterator it = decls.find(name);
-    if (it == decls.end())
-    {
-        // Insert a new entry for this name.
-        std::pair<declarations_type::iterator,bool> r =
-            decls.insert(
-                declarations_type::value_type(
-                    mp_impl->m_pool.intern(name).first, mp_impl->m_cur_attrs));
-
-        if (!r.second)
-            // Insertion failed.
-            throw general_error("dom_tree::end_declaration: failed to insert a new declaration entry.");
-    }
-    else
-        it->second = mp_impl->m_cur_attrs;
-
-    mp_impl->m_cur_attrs.clear();
+    mp_impl->m_doc_attrs.swap(mp_impl->m_cur_attrs);
 }
 
 void dom_tree::start_element(xmlns_id_t ns, const pstring& name)
@@ -229,7 +146,7 @@ void dom_tree::start_element(xmlns_id_t ns, const pstring& name)
     // These strings must be persistent.
     pstring name_safe = mp_impl->m_pool.intern(name).first;
 
-    element* p = nullptr;
+    element* p = NULL;
     if (!mp_impl->m_root)
     {
         // This must be the root element!
@@ -242,8 +159,8 @@ void dom_tree::start_element(xmlns_id_t ns, const pstring& name)
 
     // Append new element as a child element of the current element.
     p = mp_impl->m_elem_stack.back();
-    p->child_nodes.push_back(orcus::make_unique<element>(ns, name_safe));
-    p = static_cast<element*>(p->child_nodes.back().get());
+    p->child_nodes.push_back(new element(ns, name_safe));
+    p = static_cast<element*>(&p->child_nodes.back());
     p->attrs.swap(mp_impl->m_cur_attrs);
     mp_impl->m_elem_stack.push_back(p);
 }
@@ -269,7 +186,7 @@ void dom_tree::set_characters(const pstring& val)
 
     element* p = mp_impl->m_elem_stack.back();
     val2 = mp_impl->m_pool.intern(val2).first; // Make sure the string is persistent.
-    p->child_nodes.push_back(orcus::make_unique<content>(val2));
+    p->child_nodes.push_back(new content(val2));
 }
 
 void dom_tree::set_attribute(xmlns_id_t ns, const pstring& name, const pstring& val)
@@ -281,41 +198,14 @@ void dom_tree::set_attribute(xmlns_id_t ns, const pstring& name, const pstring& 
     mp_impl->m_cur_attrs.push_back(attr(ns, name2, val2));
 }
 
-void dom_tree::set_doctype(const sax::doctype_declaration& dtd)
-{
-    mp_impl->m_doctype = orcus::make_unique<sax::doctype_declaration>(dtd);  // make a copy.
-
-    sax::doctype_declaration& this_dtd = *mp_impl->m_doctype;
-    string_pool& pool = mp_impl->m_pool;
-
-    // Intern the strings.
-    this_dtd.root_element = pool.intern(dtd.root_element).first;
-    this_dtd.fpi = pool.intern(dtd.fpi).first;
-    this_dtd.uri = pool.intern(dtd.uri).first;
-}
-
-const sax::doctype_declaration* dom_tree::get_doctype() const
-{
-    return mp_impl->m_doctype.get();
-}
-
-const dom_tree::attrs_type* dom_tree::get_declaration_attributes(const pstring& name) const
-{
-    declarations_type::const_iterator it = mp_impl->m_decls.find(name);
-    return it == mp_impl->m_decls.end() ? nullptr : &it->second;
-}
-
 namespace {
 
-struct scope
+struct scope : boost::noncopyable
 {
     typedef std::vector<const dom_tree::node*> nodes_type;
     string name;
     nodes_type nodes;
     nodes_type::const_iterator current_pos;
-
-    scope(const scope&) = delete;
-    scope& operator=(const scope&) = delete;
 
     scope(const string& _name, dom_tree::node* _node) :
         name(_name)
@@ -327,7 +217,7 @@ struct scope
     scope(const string& _name) : name(_name) {}
 };
 
-typedef std::vector<std::unique_ptr<scope>> scopes_type;
+typedef boost::ptr_vector<scope> scopes_type;
 
 void print_scope(ostream& os, const scopes_type& scopes)
 {
@@ -337,7 +227,7 @@ void print_scope(ostream& os, const scopes_type& scopes)
     // Skip the first scope which is root.
     scopes_type::const_iterator it = scopes.begin(), it_end = scopes.end();
     for (++it; it != it_end; ++it)
-        os << "/" << (*it)->name;
+        os << "/" << it->name;
 }
 
 struct sort_by_name : std::binary_function<dom_tree::attr, dom_tree::attr, bool>
@@ -360,19 +250,19 @@ void dom_tree::dump_compact(ostream& os) const
 
     scopes_type scopes;
 
-    scopes.push_back(orcus::make_unique<scope>(string(), mp_impl->m_root));
+    scopes.push_back(new scope(string(), mp_impl->m_root));
     while (!scopes.empty())
     {
         bool new_scope = false;
 
         // Iterate through all elements in the current scope.
-        scope& cur_scope = *scopes.back();
+        scope& cur_scope = scopes.back();
         for (; cur_scope.current_pos != cur_scope.nodes.end(); ++cur_scope.current_pos)
         {
             const node* this_node = *cur_scope.current_pos;
             assert(this_node);
             print_scope(os, scopes);
-            if (this_node->type == node_type::content)
+            if (this_node->type == node_content)
             {
                 // This is a text content.
                 this_node->print(os, mp_impl->m_ns_cxt);
@@ -380,7 +270,7 @@ void dom_tree::dump_compact(ostream& os) const
                 continue;
             }
 
-            assert(this_node->type == node_type::element);
+            assert(this_node->type == node_element);
             const element* elem = static_cast<const element*>(this_node);
             os << "/";
             elem->print(os, mp_impl->m_ns_cxt);
@@ -410,7 +300,7 @@ void dom_tree::dump_compact(ostream& os) const
             dom_tree::nodes_type::const_iterator it = elem->child_nodes.begin(), it_end = elem->child_nodes.end();
             scope::nodes_type nodes;
             for (; it != it_end; ++it)
-                nodes.push_back(it->get());
+                nodes.push_back(&(*it));
 
             assert(!nodes.empty());
 
@@ -418,8 +308,8 @@ void dom_tree::dump_compact(ostream& os) const
             ++cur_scope.current_pos;
             ostringstream elem_name;
             elem->print(elem_name, mp_impl->m_ns_cxt);
-            scopes.push_back(orcus::make_unique<scope>(elem_name.str()));
-            scope& child_scope = *scopes.back();
+            scopes.push_back(new scope(elem_name.str()));
+            scope& child_scope = scopes.back();
             child_scope.nodes.swap(nodes);
             child_scope.current_pos = child_scope.nodes.begin();
 
@@ -435,4 +325,3 @@ void dom_tree::dump_compact(ostream& os) const
 }
 
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

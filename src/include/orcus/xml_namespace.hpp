@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #ifndef __ORCUS_XML_NAMESPACE_MANAGER_HPP__
 #define __ORCUS_XML_NAMESPACE_MANAGER_HPP__
@@ -34,8 +54,8 @@ class xmlns_repository
     size_t get_index(xmlns_id_t ns_id) const;
 
 public:
-    ORCUS_PSR_DLLPUBLIC xmlns_repository();
-    ORCUS_PSR_DLLPUBLIC ~xmlns_repository();
+    ORCUS_DLLPUBLIC xmlns_repository();
+    ORCUS_DLLPUBLIC ~xmlns_repository();
 
     /**
      * Add a set of predefined namespace values to the repository.
@@ -49,9 +69,9 @@ public:
      *                      corresponding xmlns_repository instance is
      *                      deleted.
      */
-    ORCUS_PSR_DLLPUBLIC void add_predefined_values(const xmlns_id_t* predefined_ns);
+    ORCUS_DLLPUBLIC void add_predefined_values(const xmlns_id_t* predefined_ns);
 
-    ORCUS_PSR_DLLPUBLIC xmlns_context create_context();
+    ORCUS_DLLPUBLIC xmlns_context create_context();
 
     /**
      * Get XML namespace identifier from its numerical index.
@@ -60,10 +80,10 @@ public:
      *
      * @return valid namespace identifier, or XMLNS_UNKNOWN_ID if not found.
      */
-    ORCUS_PSR_DLLPUBLIC xmlns_id_t get_identifier(size_t index) const;
+    ORCUS_DLLPUBLIC xmlns_id_t get_identifier(size_t index) const;
 
-    ORCUS_PSR_DLLPUBLIC std::string get_short_name(xmlns_id_t ns_id) const;
-    ORCUS_PSR_DLLPUBLIC std::string get_short_name(size_t index) const;
+    ORCUS_DLLPUBLIC std::string get_short_name(xmlns_id_t ns_id) const;
+    ORCUS_DLLPUBLIC std::string get_short_name(size_t index) const;
 
 private:
     xmlns_repository_impl* mp_impl;
@@ -77,7 +97,7 @@ private:
  *
  * An empty key value is associated with a default namespace.
  */
-class ORCUS_PSR_DLLPUBLIC xmlns_context
+class ORCUS_DLLPUBLIC xmlns_context
 {
     friend class xmlns_repository;
 
@@ -92,18 +112,6 @@ public:
     xmlns_id_t get(const pstring& key) const;
     size_t get_index(xmlns_id_t ns_id) const;
     std::string get_short_name(xmlns_id_t ns_id) const;
-
-    /**
-     * Get an alias currently associated with a given namespace identifier.
-     *
-     * @param ns_id namespace identifier.
-     *
-     * @return alias name currently associted with the given namespace
-     *         identifier, or an empty string if the given namespace is
-     *         currently not associated with any aliases.
-     */
-    pstring get_alias(xmlns_id_t ns_id) const;
-
     void get_all_namespaces(std::vector<xmlns_id_t>& nslist) const;
 
     void dump(std::ostream& os) const;
@@ -115,4 +123,3 @@ private:
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

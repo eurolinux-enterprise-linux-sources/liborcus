@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/xml_structure_tree.hpp"
 #include "orcus/sax_ns_parser.hpp"
@@ -18,8 +38,10 @@
 #include <vector>
 #include <cstdio>
 
-#include <unordered_map>
-#include <unordered_set>
+#include <boost/noncopyable.hpp>
+#include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 
 using namespace std;
 
@@ -28,11 +50,11 @@ namespace orcus {
 namespace {
 
 struct elem_prop;
-typedef std::unordered_map<xml_structure_tree::entity_name, elem_prop*, xml_structure_tree::entity_name::hash> element_store_type;
-typedef std::unordered_set<xml_structure_tree::entity_name, xml_structure_tree::entity_name::hash> attribute_names_type;
+typedef boost::unordered_map<xml_structure_tree::entity_name, elem_prop*, xml_structure_tree::entity_name::hash> element_store_type;
+typedef boost::unordered_set<xml_structure_tree::entity_name, xml_structure_tree::entity_name::hash> attribute_names_type;
 
 /** Element properties. */
-struct elem_prop
+struct elem_prop : boost::noncopyable
 {
     element_store_type child_elements;
     attribute_names_type attributes;
@@ -52,10 +74,7 @@ struct elem_prop
      * This flag is set only with the base element; none of the child
      * elements below the base element have this flag set.
      */
-    bool repeat;
-
-    elem_prop(const elem_prop&) = delete;
-    elem_prop& operator=(const elem_prop&) = delete;
+    bool repeat:1;
 
     elem_prop() : appearance_order(0), in_scope_count(1), repeat(false) {}
     elem_prop(size_t _appearance_order) : appearance_order(_appearance_order), in_scope_count(1), repeat(false) {}
@@ -76,7 +95,7 @@ struct element_ref
     xml_structure_tree::entity_name name;
     elem_prop* prop;
 
-    element_ref() : prop(nullptr) {}
+    element_ref() : prop(NULL) {}
     element_ref(xml_structure_tree::entity_name _name, elem_prop* _prop) :
         name(_name), prop(_prop) {}
 };
@@ -86,7 +105,7 @@ typedef std::vector<element_ref> elements_type;
 class xml_sax_handler
 {
     string_pool& m_pool;
-    std::unique_ptr<root> mp_root;
+    unique_ptr<root> mp_root;
     elements_type m_stack;
     xml_structure_tree::entity_names_type m_attrs;
 
@@ -109,15 +128,9 @@ private:
 
 public:
     xml_sax_handler(string_pool& pool) :
-        m_pool(pool), mp_root(nullptr) {}
+        m_pool(pool), mp_root(NULL) {}
 
-    void doctype(const sax::doctype_declaration&) {}
-
-    void start_declaration(const pstring& name)
-    {
-    }
-
-    void end_declaration(const pstring& name)
+    void declaration()
     {
         m_attrs.clear();
     }
@@ -189,7 +202,7 @@ public:
         m_stack.pop_back();
     }
 
-    void characters(const pstring&, bool) {}
+    void characters(const pstring&) {}
 
     void attribute(const pstring&, const pstring&)
     {
@@ -215,15 +228,12 @@ struct sort_by_appearance : std::binary_function<element_ref, element_ref, bool>
     }
 };
 
-struct scope
+struct scope : boost::noncopyable
 {
     xml_structure_tree::entity_name name;
     elements_type elements;
     elements_type::const_iterator current_pos;
     bool repeat:1;
-
-    scope(const scope&) = delete;
-    scope& operator=(const scope&) = delete;
 
     scope(const xml_structure_tree::entity_name& _name, bool _repeat, const element_ref& _elem) :
         name(_name), repeat(_repeat)
@@ -236,7 +246,7 @@ struct scope
         name(_name), repeat(_repeat) {}
 };
 
-typedef std::vector<std::unique_ptr<scope>> scopes_type;
+typedef boost::ptr_vector<scope> scopes_type;
 
 void print_scope(ostream& os, const scopes_type& scopes, const xmlns_context& cxt)
 {
@@ -248,28 +258,25 @@ void print_scope(ostream& os, const scopes_type& scopes, const xmlns_context& cx
     for (++it; it != it_end; ++it)
     {
         os << "/";
-        size_t num_id = cxt.get_index((*it)->name.ns);
+        size_t num_id = cxt.get_index(it->name.ns);
         if (num_id != index_not_found)
             os << "ns" << num_id << ":";
-        os << (*it)->name.name;
-        if ((*it)->repeat)
+        os << it->name.name;
+        if (it->repeat)
             os << "[*]";
     }
 }
 
 }
 
-struct xml_structure_tree_impl
+struct xml_structure_tree_impl : boost::noncopyable
 {
     string_pool m_pool;
     xmlns_context& m_xmlns_cxt;
     root* mp_root;
 
-    xml_structure_tree_impl(const xml_structure_tree_impl&) = delete;
-    xml_structure_tree_impl& operator=(const xml_structure_tree_impl&) = delete;
-
     xml_structure_tree_impl(xmlns_context& xmlns_cxt) :
-        m_xmlns_cxt(xmlns_cxt), mp_root(nullptr) {}
+        m_xmlns_cxt(xmlns_cxt), mp_root(NULL) {}
 
     ~xml_structure_tree_impl()
     {
@@ -277,14 +284,12 @@ struct xml_structure_tree_impl
     }
 };
 
-struct xml_structure_tree::walker_impl
+struct xml_structure_tree::walker_impl : boost::noncopyable
 {
     const xml_structure_tree_impl& m_parent_impl;
     root* mp_root; /// Root element of the authoritative tree.
     element_ref m_cur_elem;
     std::vector<element_ref> m_scopes;
-
-    walker_impl& operator=(const walker_impl&) = delete;
 
     walker_impl(const xml_structure_tree_impl& parent_impl) :
         m_parent_impl(parent_impl), mp_root(parent_impl.mp_root) {}
@@ -451,13 +456,13 @@ void xml_structure_tree::dump_compact(ostream& os) const
     cxt.dump(os);
 
     element_ref ref(mp_impl->mp_root->name, &mp_impl->mp_root->prop);
-    scopes.push_back(orcus::make_unique<scope>(entity_name(), false, ref));
+    scopes.push_back(new scope(entity_name(), false, ref));
     while (!scopes.empty())
     {
         bool new_scope = false;
 
         // Iterate through all elements in the current scope.
-        scope& cur_scope = *scopes.back();
+        scope& cur_scope = scopes.back();
         for (; cur_scope.current_pos != cur_scope.elements.end(); ++cur_scope.current_pos)
         {
             const element_ref& this_elem = *cur_scope.current_pos;
@@ -505,8 +510,8 @@ void xml_structure_tree::dump_compact(ostream& os) const
 
             // Push a new scope, and restart the loop with the new scope.
             ++cur_scope.current_pos;
-            scopes.push_back(orcus::make_unique<scope>(this_elem.name, this_elem.prop->repeat));
-            scope& child_scope = *scopes.back();
+            scopes.push_back(new scope(this_elem.name, this_elem.prop->repeat));
+            scope& child_scope = scopes.back();
             child_scope.elements.swap(elems);
             child_scope.current_pos = child_scope.elements.begin();
 
@@ -527,4 +532,3 @@ xml_structure_tree::walker xml_structure_tree::get_walker() const
 }
 
 }
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

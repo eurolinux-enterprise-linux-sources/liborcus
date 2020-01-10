@@ -1,9 +1,29 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
 #include "orcus/string_pool.hpp"
 
@@ -12,11 +32,6 @@
 #include "orcus/exception.hpp"
 
 #include <iostream>
-#include <unordered_set>
-#include <vector>
-#include <memory>
-#include <cassert>
-#include <algorithm>
 
 using namespace std;
 
@@ -35,10 +50,11 @@ private:
 
 class pstring_back_inserter
 {
-    vector<const string*>& m_store;
 public:
     pstring_back_inserter(vector<const string*>& store) : m_store(store) {}
-    void operator() (const unique_ptr<string>& p) { m_store.push_back(p.get()); }
+    void operator() (const string& r) { m_store.push_back(&r); }
+private:
+    vector<const string*>& m_store;
 };
 
 struct pstring_less
@@ -52,18 +68,17 @@ private:
 
 namespace orcus {
 
-typedef std::unordered_set<pstring, pstring::hash> string_set_type;
-typedef std::vector<std::unique_ptr<std::string>> string_store_type;
-
-struct string_pool::impl
+size_t string_pool::string_hash::operator() (const string* p) const
 {
-    string_set_type m_set;
-    string_store_type m_store;
-    /** duplicate string instances */
-    string_store_type m_merged_store;
-};
+    return m_hash(*p);
+}
 
-string_pool::string_pool() : mp_impl(orcus::make_unique<impl>()) {}
+bool string_pool::string_equal_to::operator() (const string* p1, const string* p2) const
+{
+    return m_equal_to(*p1, *p2);
+}
+
+string_pool::string_pool() {}
 
 string_pool::~string_pool()
 {
@@ -80,12 +95,12 @@ pair<pstring, bool> string_pool::intern(const char* str, size_t n)
     if (!n)
         return pair<pstring, bool>(pstring(), false);
 
-    string_set_type::const_iterator itr = mp_impl->m_set.find(pstring(str, n));
-    if (itr == mp_impl->m_set.end())
+    string_set_type::const_iterator itr = m_set.find(pstring(str, n));
+    if (itr == m_set.end())
     {
         // This string has not been interned.  Intern it.
-        mp_impl->m_store.push_back(orcus::make_unique<string>(str, n));
-        pair<string_set_type::iterator,bool> r = mp_impl->m_set.insert(pstring(mp_impl->m_store.back()->data(), n));
+        m_store.push_back(new string(str, n));
+        pair<string_set_type::iterator,bool> r = m_set.insert(pstring(&m_store.back()[0], n));
         if (!r.second)
             throw general_error("failed to intern a new string instance.");
         const pstring& ps = *r.first;
@@ -108,12 +123,12 @@ pair<pstring, bool> string_pool::intern(const pstring& str)
 
 void string_pool::dump() const
 {
-    cout << "interned string count: " << mp_impl->m_store.size() << endl;
+    cout << "interned string count: " << m_store.size() << endl;
 
-    // Sort stored strings first.
+    // Sorted stored strings first.
     vector<const string*> sorted;
-    sorted.reserve(mp_impl->m_store.size());
-    for_each(mp_impl->m_store.begin(), mp_impl->m_store.end(), pstring_back_inserter(sorted));
+    sorted.reserve(m_store.size());
+    for_each(m_store.begin(), m_store.end(), pstring_back_inserter(sorted));
     sort(sorted.begin(), sorted.end(), pstring_less());
 
     // Now dump them all to stdout.
@@ -122,66 +137,14 @@ void string_pool::dump() const
 
 void string_pool::clear()
 {
-    mp_impl->m_set.clear();
-    mp_impl->m_store.clear();
+    m_set.clear();
+    m_store.clear();
 }
 
 size_t string_pool::size() const
 {
-    return mp_impl->m_set.size();
-}
-
-void string_pool::swap(string_pool& other)
-{
-    std::swap(mp_impl, other.mp_impl);
-}
-
-void string_pool::merge(string_pool& other)
-{
-    string_store_type* other_store = &other.mp_impl->m_store;
-
-    std::for_each(other_store->begin(), other_store->end(),
-        [&](string_store_type::value_type& value)
-        {
-            const std::string* p = value.get();
-            size_t n = p->size();
-
-            pstring key(p->data(), n);
-            string_set_type::const_iterator it = mp_impl->m_set.find(key);
-
-            if (it == mp_impl->m_set.end())
-            {
-                // This is a new string value in this pool.  Move this string
-                // instance in as-is.
-                mp_impl->m_store.push_back(std::move(value));
-                assert(key.get() == mp_impl->m_store.back()->data());
-                auto r = mp_impl->m_set.insert(key);
-                if (!r.second)
-                    throw general_error("failed to intern a new string instance.");
-            }
-            else
-            {
-                // This is a duplicate string value in this pool.  Move this
-                // string instance in to the merged store.
-                mp_impl->m_merged_store.push_back(std::move(value));
-            }
-        }
-    );
-
-    // Move all duplicate string values from the other store as-is.
-    other_store = &other.mp_impl->m_merged_store;
-    std::for_each(other_store->begin(), other_store->end(),
-        [&](string_store_type::value_type& value)
-        {
-            mp_impl->m_merged_store.push_back(std::move(value));
-        }
-    );
-
-    other.mp_impl->m_store.clear();
-    other.mp_impl->m_merged_store.clear();
-    other.mp_impl->m_set.clear();
+    return m_store.size();
 }
 
 }
 
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,21 +1,38 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/*
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+/*************************************************************************
+ *
+ * Copyright (c) 2010-2012 Kohei Yoshida
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ *
+ ************************************************************************/
 
-#ifndef INCLUDED_ORCUS_GLOBAL_HPP
-#define INCLUDED_ORCUS_GLOBAL_HPP
+#ifndef __ORCUS_GLOBAL_HPP__
+#define __ORCUS_GLOBAL_HPP__
 
 #include "types.hpp"
 #include "env.hpp"
 
-#include <memory>
 #include <functional>
-
-#define ORCUS_ASCII(literal) literal, sizeof(literal)-1
-#define ORCUS_N_ELEMENTS(name) sizeof(name)/sizeof(name[0])
+#include <boost/interprocess/smart_ptr/unique_ptr.hpp>
 
 namespace orcus {
 
@@ -42,6 +59,15 @@ void print_attrs(const tokens& tokens, const xml_attrs_t& attrs);
  */
 date_time_t to_date_time(const pstring& str);
 
+template<typename _T>
+struct default_deleter : public std::unary_function<_T*, void>
+{
+    void operator() (_T* p)
+    {
+        delete p;
+    }
+};
+
 /**
  * Function object for deleting objects that are stored in map container as
  * pointers.
@@ -55,13 +81,13 @@ struct map_object_deleter : public ::std::unary_function<typename T::value_type,
     }
 };
 
-template<typename T, typename ...Args>
-std::unique_ptr<T> make_unique(Args&& ...args)
+template<typename _T, typename _Deleter = default_deleter<_T> >
+class unique_ptr : public boost::interprocess::unique_ptr<_T, _Deleter>
 {
-    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
+public:
+    unique_ptr(_T* p) : boost::interprocess::unique_ptr<_T, _Deleter>(p) {}
+};
 
 }
 
 #endif
-/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
