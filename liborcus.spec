@@ -2,7 +2,7 @@
 
 Name: liborcus
 Version: 0.5.1
-Release: 3%{?dist}
+Release: 7%{?dist}
 Summary: Standalone file import filter library for spreadsheet documents
 
 Group: System Environment/Libraries
@@ -12,6 +12,8 @@ Source: http://kohei.us/files/orcus/src/%{name}-%{version}.tar.bz2
 
 BuildRequires: boost-devel
 BuildRequires: zlib-devel
+
+Patch0: add-aarch64.patch
 
 %description
 %{name} is a standalone file import filter library for spreadsheet
@@ -37,6 +39,7 @@ Tools for working with %{name}.
 
 %prep
 %setup -q
+%patch0 -p1
 # fix build of orcus-zip-dump
 sed -i -e 's/orcus_zip_dump_LDADD = /& $(BOOST_SYSTEM_LIB) /' \
     src/Makefile.in
@@ -88,6 +91,19 @@ make check %{?_smp_mflags}
 %{_bindir}/orcus-zip-dump
 
 %changelog
+* Fri Jan 24 2014 Daniel Mach <dmach@redhat.com> - 0.5.1-7
+- Mass rebuild 2014-01-24
+
+* Tue Jan 21 2014 David Tardon <dtardon@redhat.com> - 0.5.1-6
+- Resolves: rhbz#1041331 liborcus fails to build for ARM (Aarch64)
+  (really this time)
+
+* Tue Jan 21 2014 David Tardon <dtardon@redhat.com> - 0.5.1-5
+- Resolves: rhbz#1041331 liborcus fails to build for ARM (Aarch64)
+
+* Fri Dec 27 2013 Daniel Mach <dmach@redhat.com> - 0.5.1-4
+- Mass rebuild 2013-12-27
+
 * Mon Jun 10 2013 David Tardon <dtardon@redhat.com> - 0.5.1-3
 - trivial changes
 
