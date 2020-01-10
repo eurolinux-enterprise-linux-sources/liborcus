@@ -1,0 +1,44 @@
+From be2b335dc24da491d886dfa68d2c35b38f95d59a Mon Sep 17 00:00:00 2001
+From: Markus Mohrhard <markus.mohrhard@googlemail.com>
+Date: Thu, 14 Aug 2014 01:33:48 +0200
+Subject: [PATCH] fix invalid memory access in base64 functions
+
+Boost expects the input to be a multiple of 3 bytes for the encoding and
+a multiple of 4 bytes for the decoding. Otherwise it accesses past the
+end of the input array. Therefore we now pad with '\0' and replace the
+generated 'A' with '='.
+---
+ src/parser/base64.cpp | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/src/parser/base64.cpp b/src/parser/base64.cpp
+index 3d9d770..11ea38e 100644
+--- a/src/parser/base64.cpp
++++ b/src/parser/base64.cpp
+@@ -49,9 +49,20 @@ void encode_to_base64(const std::vector<char>& input, string& encoded)
+     if (input.empty())
+         return;
+ 
+-    string _encoded(to_base64(input.begin()), to_base64(input.end()));
+-    size_t pad_size = (3 - input.size() % 3) % 3;
+-    _encoded.append(pad_size, '=');
++    std::vector<char> inp = input;
++    size_t pad_size = (3 - inp.size() % 3) % 3;
++    inp.resize(inp.size() + pad_size);
++
++    string _encoded(to_base64(inp.begin()), to_base64(inp.end()));
++
++    string::reverse_iterator it = _encoded.rbegin();
++    for (size_t i = 0; i < pad_size; ++i, ++it)
++    {
++        // 'A' is a base64 encoding of '\0'
++        // replace them with padding charachters '='
++        if (*it == 'A')
++            *it = '=';
++    }
+ 
+     encoded.swap(_encoded);
+ }
+-- 
+2.3.4
+

@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2011-2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #ifndef __ORCUS_SPREADSHEET_IMPORT_INTERFACE_HPP__
 #define __ORCUS_SPREADSHEET_IMPORT_INTERFACE_HPP__
@@ -31,6 +11,7 @@
 #include <cstdlib>
 
 #include "types.hpp"
+#include "../types.hpp"
 #include "../env.hpp"
 
 namespace orcus { namespace spreadsheet { namespace iface {
@@ -70,16 +51,21 @@ public:
      */
     virtual size_t add(const char* s, size_t n) = 0;
 
+    virtual void set_segment_font(size_t font_index) = 0;
     virtual void set_segment_bold(bool b) = 0;
     virtual void set_segment_italic(bool b) = 0;
     virtual void set_segment_font_name(const char* s, size_t n) = 0;
     virtual void set_segment_font_size(double point) = 0;
+    virtual void set_segment_font_color(color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue) = 0;
     virtual void append_segment(const char* s, size_t n) = 0;
     virtual size_t commit_segments() = 0;
 };
 
 /**
- * Interface for styles.
+ * Interface for styles. Note that because the default style must have an
+ * index of 0 in each style category, the caller must set the default styles
+ * first before importing and setting real styles. ID's of styles are
+ * assigned sequentially starting with 0 and upward in each style category.
  */
 class import_styles
 {
@@ -94,6 +80,7 @@ public:
     virtual void set_font_name(const char* s, size_t n) = 0;
     virtual void set_font_size(double point) = 0;
     virtual void set_font_underline(orcus::spreadsheet::underline_t e) = 0;
+    virtual void set_font_color(color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue) = 0;
     virtual size_t commit_font() = 0;
 
     // fill
@@ -108,6 +95,8 @@ public:
 
     virtual void set_border_count(size_t n) = 0;
     virtual void set_border_style(orcus::spreadsheet::border_direction_t dir, const char* s, size_t n) = 0;
+    virtual void set_border_color(
+        orcus::spreadsheet::border_direction_t dir, color_elem_t alpha, color_elem_t red, color_elem_t green, color_elem_t blue) = 0;
     virtual size_t commit_border() = 0;
 
     // cell protection
@@ -116,20 +105,15 @@ public:
     virtual size_t commit_cell_protection() = 0;
 
     // number format
-    virtual void set_number_format(const char* s, size_t n) = 0;
+    virtual void set_number_format_count(size_t n) = 0;
+    virtual void set_number_format_identifier(size_t id) = 0;
+    virtual void set_number_format_code(const char* s, size_t n) = 0;
     virtual size_t commit_number_format() = 0;
 
-    // cell style xf
-
-    virtual void set_cell_style_xf_count(size_t n) = 0;
-    virtual size_t commit_cell_style_xf() = 0;
-
-    // cell xf
+    // cell format and cell style format (xf == cell format)
 
     virtual void set_cell_xf_count(size_t n) = 0;
-    virtual size_t commit_cell_xf() = 0;
-
-    // xf (cell format) - used both by cell xf and cell style xf.
+    virtual void set_cell_style_xf_count(size_t n) = 0;
 
     virtual void set_xf_font(size_t index) = 0;
     virtual void set_xf_fill(size_t index) = 0;
@@ -137,6 +121,12 @@ public:
     virtual void set_xf_protection(size_t index) = 0;
     virtual void set_xf_number_format(size_t index) = 0;
     virtual void set_xf_style_xf(size_t index) = 0;
+    virtual void set_xf_apply_alignment(bool b) = 0;
+    virtual void set_xf_horizontal_alignment(orcus::spreadsheet::hor_alignment_t align) = 0;
+    virtual void set_xf_vertical_alignment(orcus::spreadsheet::ver_alignment_t align) = 0;
+
+    virtual size_t commit_cell_xf() = 0;
+    virtual size_t commit_cell_style_xf() = 0;
 
     // cell style entry
 
@@ -147,13 +137,116 @@ public:
     virtual size_t commit_cell_style() = 0;
 };
 
+class import_sheet_properties
+{
+public:
+    ORCUS_DLLPUBLIC virtual ~import_sheet_properties() = 0;
+
+    virtual void set_column_width(orcus::spreadsheet::col_t col, double width, orcus::length_unit_t unit) = 0;
+
+    virtual void set_column_hidden(orcus::spreadsheet::col_t col, bool hidden) = 0;
+
+    virtual void set_row_height(orcus::spreadsheet::row_t row, double height, orcus::length_unit_t unit) = 0;
+
+    virtual void set_row_hidden(orcus::spreadsheet::row_t row, bool hidden) = 0;
+
+    /**
+     * Specify merged cell range.  The range is given in a 2-dimensional
+     * A1-style reference.
+     *
+     * @param p_range pointer to the first character of reference string.
+     * @param n_range length of reference string.
+     */
+    virtual void set_merge_cell_range(const char* p_range, size_t n_range) = 0;
+};
+
+/**
+ * Interface for importing data tables.
+ */
+class import_data_table
+{
+public:
+    ORCUS_DLLPUBLIC virtual ~import_data_table() = 0;
+
+    virtual void set_type(orcus::spreadsheet::data_table_type_t type) = 0;
+
+    virtual void set_range(const char* p_range, size_t n_range) = 0;
+
+    virtual void set_first_reference(const char* p_ref, size_t n_ref, bool deleted) = 0;
+
+    virtual void set_second_reference(const char* p_ref, size_t n_ref, bool deleted) = 0;
+
+    virtual void commit() = 0;
+};
+
+class import_auto_filter
+{
+public:
+    ORCUS_DLLPUBLIC virtual ~import_auto_filter() = 0;
+
+    /**
+     * Specify the range where the auto filter is applied.  The range
+     * is given in a 2-dimensional A1-style reference.
+     *
+     * @param p_ref pointer to the first character of range string.
+     * @param n_ref length of range string.
+     */
+    virtual void set_range(const char* p_ref, size_t n_ref) = 0;
+
+    /**
+     * Specify the column position of a filter. The position is relative to
+     * the first column in the auto filter range.
+     *
+     * @param col 0-based column position of a filter relative to the first
+     *            column.
+     */
+    virtual void set_column(orcus::spreadsheet::col_t col) = 0;
+
+    /**
+     * Add a match value to the current column filter.
+     *
+     * @param p pointer to the first character of match value.
+     * @param n length of match value.
+     */
+    virtual void append_column_match_value(const char* p, size_t n) = 0;
+
+    /**
+     * Commit current column filter to the current auto filter.
+     */
+    virtual void commit_column() = 0;
+
+    /**
+     * Commit current auto filter to the model.
+     */
+    virtual void commit() = 0;
+};
+
 /**
  * Interface for sheet.
  */
-class import_sheet
+class ORCUS_DLLPUBLIC import_sheet
 {
 public:
-    ORCUS_DLLPUBLIC virtual ~import_sheet() = 0;
+    virtual ~import_sheet() = 0;
+
+    virtual import_sheet_properties* get_sheet_properties();
+
+    /**
+     * Get an interface for importing data tables.  Note that the implementor
+     * may decide not to support this feature in which case this method
+     * returns NULL.  The implementor is responsible for managing the life
+     * cycle of the returned interface object.
+     *
+     * @return pointer to the data table interface object.
+     */
+    virtual import_data_table* get_data_table();
+
+    /**
+     * Get an interface for importing auto filter ranges.
+     *
+     * @return pointer to the auto filter interface object.
+     */
+    virtual import_auto_filter* get_auto_filter();
 
     /**
      * Set raw string value to a cell and have the implementation
@@ -365,6 +458,16 @@ public:
     virtual import_sheet* get_sheet(const char* sheet_name, size_t sheet_name_length) = 0;
 
     /**
+     * Retrieve sheet instance by specified numerical sheet index.
+     *
+     * @param sheet_index sheet index
+     *
+     * @return pointer to the sheet instance, or NULL if no sheet instance
+     *         exists at specified sheet index position.
+     */
+    virtual import_sheet* get_sheet(orcus::spreadsheet::sheet_t sheet_index) = 0;
+
+    /**
      * This method is called at the end of import, to give the implementor a
      * chance to perform post-processing if necessary.
      */
@@ -374,3 +477,4 @@ public:
 }}}
 
 #endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

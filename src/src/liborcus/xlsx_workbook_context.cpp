@@ -1,36 +1,19 @@
-/*************************************************************************
- *
- * Copyright (c) 2011 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "xlsx_workbook_context.hpp"
 #include "ooxml_global.hpp"
 #include "ooxml_schemas.hpp"
 #include "ooxml_token_constants.hpp"
 #include "ooxml_namespace_types.hpp"
+#include "session_context.hpp"
+
 #include "orcus/global.hpp"
+#include "orcus/measurement.hpp"
 
 using namespace std;
 
@@ -41,19 +24,21 @@ namespace {
 class workbook_sheet_attr_parser : public unary_function<xml_token_attr_t, void>
 {
 public:
+    workbook_sheet_attr_parser(session_context* cxt) : m_cxt(cxt) {}
+
     void operator() (const xml_token_attr_t& attr)
     {
         if (attr.ns == NS_ooxml_xlsx && attr.name == XML_name)
-            m_sheet.name = attr.value.intern();
+            m_sheet.name = m_cxt->m_string_pool.intern(attr.value).first;
         else if (attr.ns == NS_ooxml_xlsx && attr.name == XML_sheetId)
         {
             const pstring& val = attr.value;
             if (!val.empty())
-                m_sheet.id = strtoul(val.str().c_str(), NULL, 10);
+                m_sheet.id = to_long(val);
         }
         else if (attr.ns == NS_ooxml_r && attr.name == XML_id)
         {
-            m_rid = attr.value.intern();
+            m_rid = m_cxt->m_string_pool.intern(attr.value).first;
         }
     }
 
@@ -61,14 +46,15 @@ public:
     const pstring& get_rid() const { return m_rid; }
 
 private:
+    session_context* m_cxt;
     pstring m_rid;
     xlsx_rel_sheet_info m_sheet;
 };
 
 }
 
-xlsx_workbook_context::xlsx_workbook_context(const tokens& tokens) :
-    xml_context_base(tokens) {}
+xlsx_workbook_context::xlsx_workbook_context(session_context& session_cxt, const tokens& tokens) :
+    xml_context_base(session_cxt, tokens) {}
 
 xlsx_workbook_context::~xlsx_workbook_context() {}
 
@@ -77,7 +63,7 @@ bool xlsx_workbook_context::can_handle_element(xmlns_id_t /*ns*/, xml_token_t /*
     return true;
 }
 
-xml_context_base* xlsx_workbook_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/) const
+xml_context_base* xlsx_workbook_context::create_child_context(xmlns_id_t /*ns*/, xml_token_t /*name*/)
 {
     return NULL;
 }
@@ -103,7 +89,7 @@ void xlsx_workbook_context::start_element(xmlns_id_t ns, xml_token_t name, const
         case XML_sheet:
         {
             xml_element_expected(parent, NS_ooxml_xlsx, XML_sheets);
-            workbook_sheet_attr_parser func;
+            workbook_sheet_attr_parser func(&get_session_context());
             func = for_each(attrs.begin(), attrs.end(), func);
             m_sheets.push_back(new xlsx_rel_sheet_info(func.get_sheet()));
             const xlsx_rel_sheet_info& info = m_sheets.back();
@@ -121,7 +107,7 @@ bool xlsx_workbook_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void xlsx_workbook_context::characters(const pstring& str) {}
+void xlsx_workbook_context::characters(const pstring& str, bool transient) {}
 
 void xlsx_workbook_context::pop_sheet_info(opc_rel_extras_t& sheets)
 {
@@ -129,3 +115,4 @@ void xlsx_workbook_context::pop_sheet_info(opc_rel_extras_t& sheets)
 }
 
 }
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2010 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #ifndef __ORCUS_PSTRING_HPP__
 #define __ORCUS_PSTRING_HPP__
@@ -37,6 +17,8 @@
 
 namespace orcus {
 
+class string_pool;
+
 /**
  * This string class does not store any char arrays, but it only stores the
  * position of the first char in the memory, and the size of the char array.
@@ -46,40 +28,6 @@ class ORCUS_DLLPUBLIC pstring
     friend ::std::ostream& operator<< (::std::ostream& os, const pstring& str);
 
 public:
-    /**
-     * Create a new string instance and hold it internally until
-     * intern::dispose() gets called.
-     *
-     * @param str string to intern.
-     *
-     * @return pstring instance pointing to the interned string.
-     */
-    static pstring intern(const char* str);
-
-    static pstring intern(const char* str, size_t n);
-
-    struct ORCUS_DLLPUBLIC intern
-    {
-        /**
-         * Destroy all interned string instances.  Call this before the
-         * program exits.
-         */
-        static void dispose();
-
-        /**
-         * Return how many strings have been interned so far.
-         *
-         * @return size_t number of interned string instances.
-         */
-        static size_t size();
-
-        static void dump();
-
-    private:
-        intern();
-        intern(const intern&);
-        ~intern();
-    };
 
     pstring() : m_pos(NULL), m_size(0) {}
     pstring(const char* _pos) : m_pos(_pos) { m_size = std::strlen(_pos); }
@@ -130,8 +78,6 @@ public:
         size_t operator() (const pstring& val) const;
     };
 
-    pstring intern() const;
-
 private:
     const char* m_pos;
     size_t      m_size;
@@ -142,6 +88,10 @@ inline ::std::ostream& operator<< (::std::ostream& os, const pstring& str)
     return os << str.str();
 }
 
+ORCUS_DLLPUBLIC std::string operator+ (const std::string& left, const pstring& right);
+ORCUS_DLLPUBLIC std::string& operator+= (std::string& left, const pstring& right);
+
 }
 
 #endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

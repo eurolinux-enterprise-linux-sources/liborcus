@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "opc_reader.hpp"
 #include "xml_stream_parser.hpp"
@@ -85,10 +65,11 @@ private:
 
 opc_reader::part_handler::~part_handler() {}
 
-opc_reader::opc_reader(xmlns_repository& ns_repo, part_handler& handler) :
+opc_reader::opc_reader(xmlns_repository& ns_repo, session_context& cxt, part_handler& handler) :
     m_ns_repo(ns_repo),
+    m_session_cxt(cxt),
     m_handler(handler),
-    m_opc_rel_handler(new opc_relations_context(opc_tokens)) {}
+    m_opc_rel_handler(new opc_relations_context(m_session_cxt, opc_tokens)) {}
 
 void opc_reader::read_file(const char* fpath)
 {
@@ -239,7 +220,7 @@ void opc_reader::read_content_types()
 
     xml_stream_parser parser(m_ns_repo, opc_tokens, reinterpret_cast<const char*>(&buffer[0]), buffer.size(), "[Content_Types].xml");
     ::boost::scoped_ptr<xml_simple_stream_handler> handler(
-        new xml_simple_stream_handler(new opc_content_types_context(opc_tokens)));
+        new xml_simple_stream_handler(new opc_content_types_context(m_session_cxt, opc_tokens)));
     parser.set_handler(handler.get());
     parser.parse();
 
@@ -281,3 +262,4 @@ string opc_reader::get_current_dir() const
 }
 
 }
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

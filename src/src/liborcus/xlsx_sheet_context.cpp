@@ -1,38 +1,21 @@
-/*************************************************************************
- *
- * Copyright (c) 2011-2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "xlsx_sheet_context.hpp"
+#include "xlsx_session_data.hpp"
 #include "ooxml_global.hpp"
 #include "ooxml_schemas.hpp"
 #include "ooxml_token_constants.hpp"
 #include "ooxml_namespace_types.hpp"
+#include "xml_context_global.hpp"
 #include "orcus/exception.hpp"
 #include "orcus/global.hpp"
 #include "orcus/spreadsheet/import_interface.hpp"
+#include "orcus/measurement.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -43,28 +26,100 @@ namespace orcus {
 
 namespace {
 
-class row_attr_parser : public std::unary_function<void, xml_token_attr_t>
+class col_attr_parser : public std::unary_function<void, xml_token_attr_t>
 {
+    long m_min;
+    long m_max;
+    double m_width;
+    bool m_custom_width;
+    bool m_contains_width;
+    bool m_hidden;
 public:
-    row_attr_parser() : m_row(0) {}
+    col_attr_parser() : m_min(0), m_max(0), m_width(0.0), m_custom_width(false),
+                        m_contains_width(false), m_hidden(false) {}
+
     void operator() (const xml_token_attr_t& attr)
     {
-        if (attr.name == XML_r)
-        {
-            // row index
-            m_row = static_cast<spreadsheet::row_t>(
-                strtoul(attr.value.str().c_str(), NULL, 10));
-            if (!m_row)
-                throw xml_structure_error("row number can never be zero!");
+        if (attr.value.empty())
+            return;
 
-            m_row -= 1; // from 1-based to 0-based.
+        const char* p = attr.value.get();
+        const char* p_end = p + attr.value.size();
+
+        switch (attr.name)
+        {
+            case XML_min:
+                m_min = to_long(p, p_end);
+            break;
+            case XML_max:
+                m_max = to_long(p, p_end);
+            break;
+            case XML_width:
+                m_width = to_double(p, p_end);
+                m_contains_width = true;
+            break;
+            case XML_customWidth:
+                m_custom_width = to_long(p, p_end);
+            break;
+            case XML_hidden:
+                m_hidden = to_long(p, p_end);
+            break;
+            default:
+                ;
+        }
+    }
+
+    long get_min() const { return m_min; }
+    long get_max() const { return m_max; }
+    double get_width() const { return m_width; }
+    bool is_custom_width() const { return m_custom_width; }
+    bool contains_width() const { return m_contains_width; }
+    bool is_hidden() const { return m_hidden; }
+};
+
+class row_attr_parser : public std::unary_function<void, xml_token_attr_t>
+{
+    spreadsheet::row_t m_row;
+    length_t m_height;
+    bool m_contains_address;
+    bool m_hidden;
+public:
+    row_attr_parser() : m_row(0), m_contains_address(false), m_hidden(false) {}
+    void operator() (const xml_token_attr_t& attr)
+    {
+        switch (attr.name)
+        {
+            case XML_r:
+            {
+                // row index
+                m_row = static_cast<spreadsheet::row_t>(to_long(attr.value));
+                if (!m_row)
+                    throw xml_structure_error("row number can never be zero!");
+
+                m_row -= 1; // from 1-based to 0-based.
+                m_contains_address = true;
+            }
+            break;
+            case XML_ht:
+            {
+                m_height.value = to_double(attr.value);
+                m_height.unit = length_unit_point;
+            }
+            case XML_hidden:
+                m_hidden = to_long(attr.value) != 0;
+            break;
+            default:
+                ;
         }
     }
 
     spreadsheet::row_t get_row() const { return m_row; }
 
-private:
-    spreadsheet::row_t m_row;
+    length_t get_height() const { return m_height; }
+
+    bool contains_address() const { return m_contains_address; }
+
+    bool is_hidden() const { return m_hidden; }
 };
 
 class cell_attr_parser : public std::unary_function<xml_token_attr_t, void>
@@ -79,12 +134,14 @@ class cell_attr_parser : public std::unary_function<xml_token_attr_t, void>
     xlsx_sheet_context::cell_type m_type;
     address m_address;
     size_t m_xf;
+    bool m_contains_address;
 
 public:
     cell_attr_parser() :
         m_type(xlsx_sheet_context::cell_type_value),
         m_address(0,0),
-        m_xf(0) {}
+        m_xf(0),
+        m_contains_address(false) {}
 
     void operator() (const xml_token_attr_t& attr)
     {
@@ -93,6 +150,7 @@ public:
             case XML_r:
                 // cell address in A1 notation.
                 m_address = to_cell_address(attr.value);
+                m_contains_address = true;
             break;
             case XML_t:
                 // cell type
@@ -100,7 +158,7 @@ public:
             break;
             case XML_s:
                 // cell style
-                m_xf = strtoul(attr.value.str().c_str(), NULL, 10);
+                m_xf = to_long(attr.value);
             break;
         }
     }
@@ -110,6 +168,7 @@ public:
     spreadsheet::row_t get_row() const { return m_address.row; }
     spreadsheet::col_t get_col() const { return m_address.col; }
     size_t get_xf() const { return m_xf; }
+    bool contains_address() const { return m_contains_address; }
 
 private:
     xlsx_sheet_context::cell_type to_cell_type(const pstring& s) const
@@ -172,41 +231,82 @@ private:
 
 class formula_attr_parser : public std::unary_function<xml_token_attr_t, void>
 {
-    pstring m_type;
-    pstring m_ref;
-    int m_shared_index;
-public:
-    formula_attr_parser() : m_shared_index(-1) {}
+    xlsx_sheet_context::formula m_attrs;
 
+public:
     void operator() (const xml_token_attr_t& attr)
     {
         switch (attr.name)
         {
             case XML_t:
-                m_type = attr.value;
+            {
+                if (attr.value == "shared")
+                    m_attrs.type = spreadsheet::formula_shared;
+                else if (attr.value == "array")
+                    m_attrs.type = spreadsheet::formula_array;
+                else if (attr.value == "dataTable")
+                    m_attrs.type = spreadsheet::formula_data_table;
+            }
             break;
             case XML_ref:
-                m_ref = attr.value;
+                m_attrs.ref = attr.value;
             break;
             case XML_si:
-                m_shared_index = strtoul(attr.value.get(), NULL, 10);
+                m_attrs.shared_id = to_long(attr.value);
             break;
+            case XML_dt2D:
+                m_attrs.data_table_2d = to_long(attr.value) != 0;
+            break;
+            case XML_dtr:
+                m_attrs.data_table_row_based = to_long(attr.value) != 0;
+            break;
+            case XML_del1:
+                m_attrs.data_table_ref1_deleted = to_long(attr.value) != 0;
+            break;
+            case XML_del2:
+                m_attrs.data_table_ref2_deleted = to_long(attr.value) != 0;
+            break;
+            case XML_r1:
+                m_attrs.data_table_ref1 = attr.value;
+            break;
+            case XML_r2:
+                m_attrs.data_table_ref2 = attr.value;
+            break;
+            default:
+                ;
         }
     }
 
-    pstring get_type() const { return m_type; }
-    pstring get_ref() const { return m_ref; }
-    int get_shared_index() const { return m_shared_index; }
+    xlsx_sheet_context::formula get_attrs() const { return m_attrs; }
 };
 
 }
 
-xlsx_sheet_context::xlsx_sheet_context(const tokens& tokens, spreadsheet::iface::import_sheet* sheet) :
-    xml_context_base(tokens),
+xlsx_sheet_context::formula::formula() :
+    type(spreadsheet::formula_normal),
+    str(), ref(),
+    data_table_ref1(),
+    data_table_ref2(),
+    shared_id(-1),
+    data_table_2d(false),
+    data_table_row_based(false),
+    data_table_ref1_deleted(false),
+    data_table_ref2_deleted(false) {}
+
+void xlsx_sheet_context::formula::reset()
+{
+    *this = formula();
+}
+
+xlsx_sheet_context::xlsx_sheet_context(
+    session_context& session_cxt, const tokens& tokens, spreadsheet::sheet_t sheet_id, spreadsheet::iface::import_sheet* sheet) :
+    xml_context_base(session_cxt, tokens),
     mp_sheet(sheet),
-    m_cur_row(0),
+    m_sheet_id(sheet_id),
+    m_cur_row(-1),
+    m_cur_col(-1),
     m_cur_cell_type(cell_type_value),
-    m_cur_shared_formula_id(-1)
+    m_cur_cell_xf(0)
 {
 }
 
@@ -219,7 +319,7 @@ bool xlsx_sheet_context::can_handle_element(xmlns_id_t ns, xml_token_t name) con
     return true;
 }
 
-xml_context_base* xlsx_sheet_context::create_child_context(xmlns_id_t ns, xml_token_t name) const
+xml_context_base* xlsx_sheet_context::create_child_context(xmlns_id_t ns, xml_token_t name)
 {
     return NULL;
 }
@@ -243,10 +343,45 @@ void xlsx_sheet_context::start_element(xmlns_id_t ns, xml_token_t name, const xm
             xml_element_expected(parent, NS_ooxml_xlsx, XML_worksheet);
         break;
         case XML_col:
+        {
             xml_element_expected(parent, NS_ooxml_xlsx, XML_cols);
+            col_attr_parser func;
+            func = for_each(attrs.begin(), attrs.end(), func);
+
+            spreadsheet::iface::import_sheet_properties* sheet_props = mp_sheet->get_sheet_properties();
+            if (sheet_props)
+            {
+                double width = func.get_width();
+                bool contains_width = func.contains_width();
+                bool hidden = func.is_hidden();
+                for (spreadsheet::col_t col = func.get_min(); col <= func.get_max(); ++col)
+                {
+                    if (contains_width)
+                        sheet_props->set_column_width(col-1, width, length_unit_xlsx_column_digit);
+                    sheet_props->set_column_hidden(col-1, hidden);
+                }
+            }
+        }
         break;
         case XML_dimension:
             xml_element_expected(parent, NS_ooxml_xlsx, XML_worksheet);
+        break;
+        case XML_mergeCells:
+            xml_element_expected(parent, NS_ooxml_xlsx, XML_worksheet);
+        break;
+        case XML_mergeCell:
+        {
+            xml_element_expected(parent, NS_ooxml_xlsx, XML_mergeCells);
+
+            spreadsheet::iface::import_sheet_properties* sheet_props = mp_sheet->get_sheet_properties();
+            if (sheet_props)
+            {
+                // ref contains merged range in A1 reference style.
+                pstring ref = for_each(
+                    attrs.begin(), attrs.end(), single_attr_getter(m_pool, NS_ooxml_xlsx, XML_ref)).get_value();
+                sheet_props->set_merge_cell_range(ref.get(), ref.size());
+            }
+        }
         break;
         case XML_pageMargins:
             xml_element_expected(parent, NS_ooxml_xlsx, XML_worksheet);
@@ -271,7 +406,23 @@ void xlsx_sheet_context::start_element(xmlns_id_t ns, xml_token_t name, const xm
             xml_element_expected(parent, NS_ooxml_xlsx, XML_sheetData);
             row_attr_parser func;
             func = for_each(attrs.begin(), attrs.end(), func);
-            m_cur_row = func.get_row();
+            if (func.contains_address())
+                m_cur_row = func.get_row();
+            else
+                ++m_cur_row;
+
+            m_cur_col = -1;
+
+            spreadsheet::iface::import_sheet_properties* sheet_props = mp_sheet->get_sheet_properties();
+            if (sheet_props)
+            {
+                length_t ht = func.get_height();
+                if (ht.unit != length_unit_unknown)
+                    sheet_props->set_row_height(m_cur_row, ht.value, ht.unit);
+
+                bool hidden = func.is_hidden();
+                sheet_props->set_row_hidden(m_cur_row, hidden);
+            }
         }
         break;
         case XML_c:
@@ -280,10 +431,18 @@ void xlsx_sheet_context::start_element(xmlns_id_t ns, xml_token_t name, const xm
             cell_attr_parser func;
             func = for_each(attrs.begin(), attrs.end(), func);
 
-            if (m_cur_row != func.get_row())
-                throw xml_structure_error("row numbers differ!");
+            if (func.contains_address())
+            {
+                if (m_cur_row != func.get_row())
+                    throw xml_structure_error("row numbers differ!");
 
-            m_cur_col = func.get_col();
+                m_cur_col = func.get_col();
+            }
+            else
+            {
+                ++m_cur_col;
+            }
+
             m_cur_cell_type = func.get_cell_type();
             m_cur_cell_xf = func.get_xf();
         }
@@ -293,13 +452,55 @@ void xlsx_sheet_context::start_element(xmlns_id_t ns, xml_token_t name, const xm
             xml_element_expected(parent, NS_ooxml_xlsx, XML_c);
             formula_attr_parser func;
             func = for_each(attrs.begin(), attrs.end(), func);
-            m_cur_formula_type = func.get_type();
-            m_cur_formula_ref = func.get_ref();
-            m_cur_shared_formula_id = func.get_shared_index();
+            m_cur_formula = func.get_attrs();
         }
         break;
         case XML_v:
             xml_element_expected(parent, NS_ooxml_xlsx, XML_c);
+        break;
+        case XML_autoFilter:
+        {
+            xml_element_expected(parent, NS_ooxml_xlsx, XML_worksheet);
+            spreadsheet::iface::import_auto_filter* af = mp_sheet->get_auto_filter();
+            if (af)
+            {
+                pstring ref = for_each(
+                    attrs.begin(), attrs.end(),
+                    single_attr_getter(m_pool, NS_ooxml_xlsx, XML_ref)).get_value();
+                af->set_range(ref.get(), ref.size());
+            }
+        }
+        break;
+        case XML_filterColumn:
+        {
+            xml_element_expected(parent, NS_ooxml_xlsx, XML_autoFilter);
+            spreadsheet::iface::import_auto_filter* af = mp_sheet->get_auto_filter();
+            if (af)
+            {
+                pstring colid = for_each(
+                    attrs.begin(), attrs.end(),
+                    single_attr_getter(m_pool, NS_ooxml_xlsx, XML_colId)).get_value();
+                spreadsheet::col_t col = to_long(colid);
+                af->set_column(col);
+            }
+        }
+        break;
+        case XML_filters:
+            xml_element_expected(parent, NS_ooxml_xlsx, XML_filterColumn);
+        break;
+        case XML_filter:
+        {
+            xml_element_expected(parent, NS_ooxml_xlsx, XML_filters);
+            spreadsheet::iface::import_auto_filter* af = mp_sheet->get_auto_filter();
+            if (af)
+            {
+                pstring val = for_each(
+                    attrs.begin(), attrs.end(),
+                    single_attr_getter(m_pool, NS_ooxml_xlsx, XML_val)).get_value();
+                if (!val.empty())
+                    af->append_column_match_value(val.get(), val.size());
+            }
+        }
         break;
         default:
             warn_unhandled();
@@ -315,98 +516,118 @@ bool xlsx_sheet_context::end_element(xmlns_id_t ns, xml_token_t name)
             end_element_cell();
         break;
         case XML_f:
-        {
-#if 0
-            cout << "cell: row=" << m_cur_row << "; col=" << m_cur_col << "; ";
-
-            if (m_cur_shared_formula_id >= 0)
-            {
-                cout << "shared formula: index = " << m_cur_shared_formula_id;
-                if (!m_cur_str.empty())
-                    cout << "; " << m_cur_str;
-                cout << endl;
-            }
-            else
-                cout << "formula: " << m_cur_str << endl;
-#endif
-
-            m_cur_formula_str = m_cur_str;
-        }
+            m_cur_formula.str = m_cur_str;
+        break;
         case XML_v:
             m_cur_value = m_cur_str;
         break;
+        case XML_autoFilter:
+        {
+            spreadsheet::iface::import_auto_filter* af = mp_sheet->get_auto_filter();
+            if (af)
+                af->commit();
+        }
+        break;
+        case XML_filterColumn:
+        {
+            spreadsheet::iface::import_auto_filter* af = mp_sheet->get_auto_filter();
+            if (af)
+                af->commit_column();
+        }
+        break;
+        default:
+            ;
     }
 
     m_cur_str.clear();
     return pop_stack(ns, name);
 }
 
-void xlsx_sheet_context::characters(const pstring& str)
+void xlsx_sheet_context::characters(const pstring& str, bool transient)
 {
     m_cur_str = str;
+    if (transient)
+        m_cur_str = m_pool.intern(m_cur_str).first;
 }
 
 void xlsx_sheet_context::end_element_cell()
 {
-    if (!m_cur_formula_str.empty())
+    session_context& cxt = get_session_context();
+    xlsx_session_data& session_data = static_cast<xlsx_session_data&>(*cxt.mp_data);
+
+    if (!m_cur_formula.str.empty())
     {
-        if (m_cur_formula_type == "shared" && m_cur_shared_formula_id >= 0)
+        if (m_cur_formula.type == spreadsheet::formula_shared && m_cur_formula.shared_id >= 0)
         {
             // shared formula expression
-            mp_sheet->set_shared_formula(
-                m_cur_row, m_cur_col, spreadsheet::xlsx_2007, m_cur_shared_formula_id,
-                m_cur_formula_str.get(), m_cur_formula_str.size(),
-                m_cur_formula_ref.get(), m_cur_formula_ref.size());
+            session_data.m_shared_formulas.push_back(
+                new xlsx_session_data::shared_formula(
+                    m_sheet_id, m_cur_row, m_cur_col, m_cur_formula.shared_id,
+                    m_cur_formula.str.str(), m_cur_formula.ref.str()));
         }
-        else if (m_cur_formula_type == "array")
+        else if (m_cur_formula.type == spreadsheet::formula_array)
         {
             // array formula expression
-            mp_sheet->set_array_formula(
-                m_cur_row, m_cur_col, spreadsheet::xlsx_2007,
-                m_cur_formula_str.get(), m_cur_formula_str.size(),
-                m_cur_formula_ref.get(), m_cur_formula_ref.size());
+            session_data.m_formulas.push_back(
+                new xlsx_session_data::formula(
+                    m_sheet_id, m_cur_row, m_cur_col, m_cur_formula.str.str(), m_cur_formula.ref.str()));
         }
         else
         {
             // normal (non-shared) formula expression
-            mp_sheet->set_formula(
-                m_cur_row, m_cur_col, spreadsheet::xlsx_2007, m_cur_formula_str.get(),
-                m_cur_formula_str.size());
+            session_data.m_formulas.push_back(
+                new xlsx_session_data::formula(
+                    m_sheet_id, m_cur_row, m_cur_col, m_cur_formula.str.str()));
         }
     }
-    else if (m_cur_formula_type == "shared" && m_cur_shared_formula_id >= 0)
+    else if (m_cur_formula.type == spreadsheet::formula_shared && m_cur_formula.shared_id >= 0)
     {
         // shared formula without formula expression
-        mp_sheet->set_shared_formula(m_cur_row, m_cur_col, m_cur_shared_formula_id);
+        session_data.m_shared_formulas.push_back(
+            new xlsx_session_data::shared_formula(
+                m_sheet_id, m_cur_row, m_cur_col, m_cur_formula.shared_id));
+    }
+    else if (m_cur_formula.type == spreadsheet::formula_data_table)
+    {
+        // Import data table.
+        spreadsheet::iface::import_data_table* dt = mp_sheet->get_data_table();
+        if (dt)
+        {
+            if (m_cur_formula.data_table_2d)
+            {
+                dt->set_type(spreadsheet::data_table_both);
+                dt->set_range(m_cur_formula.ref.get(), m_cur_formula.ref.size());
+                dt->set_first_reference(
+                    m_cur_formula.data_table_ref1.get(), m_cur_formula.data_table_ref1.size(),
+                    m_cur_formula.data_table_ref1_deleted);
+                dt->set_second_reference(
+                    m_cur_formula.data_table_ref2.get(), m_cur_formula.data_table_ref2.size(),
+                    m_cur_formula.data_table_ref2_deleted);
+            }
+            else if (m_cur_formula.data_table_row_based)
+            {
+                dt->set_type(spreadsheet::data_table_row);
+                dt->set_range(m_cur_formula.ref.get(), m_cur_formula.ref.size());
+                dt->set_first_reference(
+                    m_cur_formula.data_table_ref1.get(), m_cur_formula.data_table_ref1.size(),
+                    m_cur_formula.data_table_ref1_deleted);
+            }
+            else
+            {
+                dt->set_type(spreadsheet::data_table_column);
+                dt->set_range(m_cur_formula.ref.get(), m_cur_formula.ref.size());
+                dt->set_first_reference(
+                    m_cur_formula.data_table_ref1.get(), m_cur_formula.data_table_ref1.size(),
+                    m_cur_formula.data_table_ref1_deleted);
+            }
+            dt->commit();
+        }
+
+        push_raw_cell_value();
     }
     else if (!m_cur_value.empty())
     {
-        switch (m_cur_cell_type)
-        {
-            case cell_type_string:
-            {
-                // string cell
-                size_t str_id = strtoul(m_cur_value.get(), NULL, 10);
-                mp_sheet->set_string(m_cur_row, m_cur_col, str_id);
-            }
-            break;
-            case cell_type_value:
-            {
-                // value cell
-                double val = strtod(m_cur_value.get(), NULL);
-                mp_sheet->set_value(m_cur_row, m_cur_col, val);
-            }
-            break;
-            case cell_type_boolean:
-            {
-                // boolean cell
-                bool val = strtoul(m_cur_value.get(), NULL, 10) != 0;
-                mp_sheet->set_bool(m_cur_row, m_cur_col, val);
-            }
-            break;
-            default:
-                warn("unhanlded cell content type");
-        }
+        push_raw_cell_value();
     }
 
     if (m_cur_cell_xf)
@@ -414,10 +635,42 @@ void xlsx_sheet_context::end_element_cell()
 
     // reset cell related parameters.
     m_cur_value.clear();
-    m_cur_formula_type.clear();
-    m_cur_formula_ref.clear();
-    m_cur_formula_str.clear();
-    m_cur_shared_formula_id = -1;
+    m_cur_formula.reset();
+}
+
+void xlsx_sheet_context::push_raw_cell_value()
+{
+    if (m_cur_value.empty())
+        return;
+
+    switch (m_cur_cell_type)
+    {
+        case cell_type_string:
+        {
+            // string cell
+            size_t str_id = to_long(m_cur_value);
+            mp_sheet->set_string(m_cur_row, m_cur_col, str_id);
+        }
+        break;
+        case cell_type_value:
+        {
+            // value cell
+            double val = to_double(m_cur_value);
+            mp_sheet->set_value(m_cur_row, m_cur_col, val);
+        }
+        break;
+        case cell_type_boolean:
+        {
+            // boolean cell
+            bool val = to_long(m_cur_value) != 0;
+            mp_sheet->set_bool(m_cur_row, m_cur_col, val);
+        }
+        break;
+        default:
+            warn("unhanlded cell content type");
+    }
 }
 
 }
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

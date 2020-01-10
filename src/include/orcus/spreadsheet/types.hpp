@@ -1,32 +1,15 @@
-/*************************************************************************
- *
- * Copyright (c) 2010, 2011 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
-#ifndef __ORCUS_SPREADSHEET_GLOBAL_HPP__
-#define __ORCUS_SPREADSHEET_GLOBAL_HPP__
+#ifndef ORCUS_SPREADSHEET_TYPES_HPP
+#define ORCUS_SPREADSHEET_TYPES_HPP
+
+#include "../env.hpp"
+#include <cstdlib>
 
 namespace orcus { namespace spreadsheet {
 
@@ -34,9 +17,15 @@ typedef int row_t;
 typedef int col_t;
 typedef int sheet_t;
 typedef unsigned char color_elem_t;
+typedef unsigned short col_width_t;
+typedef unsigned short row_height_t;
+
+ORCUS_DLLPUBLIC col_width_t get_default_column_width();
+ORCUS_DLLPUBLIC row_height_t get_default_row_height();
 
 enum border_direction_t
 {
+    border_direction_unknown = 0,
     border_top,
     border_bottom,
     border_left,
@@ -52,6 +41,14 @@ enum formula_grammar_t
     gnumeric
 };
 
+enum formula_t
+{
+    formula_array,
+    formula_data_table,
+    formula_normal,
+    formula_shared
+};
+
 enum underline_t
 {
     underline_none,
@@ -61,6 +58,40 @@ enum underline_t
     underline_double_accounting // unique to xlsx
 };
 
+enum hor_alignment_t
+{
+    hor_alignment_unknown = 0,
+    hor_alignment_left,
+    hor_alignment_center,
+    hor_alignment_right,
+    hor_alignment_justified,
+    hor_alignment_distributed,
+    hor_alignment_filled
+};
+
+enum ver_alignment_t
+{
+    ver_alignment_unknown = 0,
+    ver_alignment_top,
+    ver_alignment_middle,
+    ver_alignment_bottom,
+    ver_alignment_justified,
+    ver_alignment_distributed
+};
+
+/**
+ * Type of data table.  A data table can be either of a single-variable
+ * column, a single-variable row, or a double-variable type that uses both
+ * column and row input cells.
+ */
+enum data_table_type_t
+{
+    data_table_column,
+    data_table_row,
+    data_table_both
+};
+
 }}
 
 #endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

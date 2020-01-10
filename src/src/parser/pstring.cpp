@@ -1,32 +1,13 @@
-/*************************************************************************
- *
- * Copyright (c) 2010 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "orcus/pstring.hpp"
 #include "orcus/string_pool.hpp"
+#include "orcus/parser_global.hpp"
 
 #include <cassert>
 #include <iostream>
@@ -37,47 +18,6 @@
 using namespace std;
 
 namespace orcus {
-
-namespace {
-
-/**
- * Internal cache to store interned string instances.
- */
-struct _interned_strings {
-    string_pool store;
-    ::boost::mutex mtx;
-} interned_strings;
-
-}
-
-pstring pstring::intern(const char* str)
-{
-    return intern(str, strlen(str));
-}
-
-pstring pstring::intern(const char* str, size_t n)
-{
-    ::boost::mutex::scoped_lock lock(interned_strings.mtx);
-    return interned_strings.store.intern(str, n).first;
-}
-
-void pstring::intern::dispose()
-{
-    ::boost::mutex::scoped_lock lock(interned_strings.mtx);
-    interned_strings.store.clear();
-}
-
-size_t pstring::intern::size()
-{
-    ::boost::mutex::scoped_lock lock(interned_strings.mtx);
-    return interned_strings.store.size();
-}
-
-void pstring::intern::dump()
-{
-    ::boost::mutex::scoped_lock lock(interned_strings.mtx);
-    interned_strings.store.dump();
-}
 
 size_t pstring::hash::operator() (const pstring& val) const
 {
@@ -145,15 +85,8 @@ pstring pstring::trim() const
     // Find the first non-space character.
     for ( ;p != p_end; ++p)
     {
-        switch (*p)
-        {
-            case ' ':
-            case 0x0A:
-            case 0x0D:
-                continue;
-            default:
-                ;
-        }
+        if (is_blank(*p))
+            continue;
         break;
     }
 
@@ -166,15 +99,8 @@ pstring pstring::trim() const
     // Find the last non-space character.
     for (--p_end; p_end != p; --p_end)
     {
-        switch (*p_end)
-        {
-            case ' ':
-            case 0x0A:
-            case 0x0D:
-                continue;
-            default:
-                ;
-        }
+        if (is_blank(*p_end))
+            continue;
         break;
     }
 
@@ -182,9 +108,30 @@ pstring pstring::trim() const
     return pstring(p, p_end-p);
 }
 
-pstring pstring::intern() const
+std::string operator+ (const std::string& left, const pstring& right)
 {
-    return intern(m_pos, m_size);
+    std::string ret = left;
+    if (!right.empty())
+    {
+        const char* p = right.get();
+        const char* p_end = p + right.size();
+        for (; p != p_end; ++p)
+            ret.push_back(*p);
+    }
+    return ret;
+}
+
+std::string& operator+= (std::string& left, const pstring& right)
+{
+    if (!right.empty())
+    {
+        const char* p = right.get();
+        const char* p_end = p + right.size();
+        for (; p != p_end; ++p)
+            left.push_back(*p);
+    }
+    return left;
 }
 
 }
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

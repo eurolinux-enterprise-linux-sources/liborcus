@@ -1,0 +1,26 @@
+From 9ef8ed8bdbe2c9756115c7d3e98c7180bb63fd0f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Caol=C3=A1n=20McNamara?= <caolanm@redhat.com>
+Date: Thu, 25 Sep 2014 10:38:35 +0100
+Subject: [PATCH] coverity#54448 Uninitialized scalar field
+
+---
+ src/liborcus/xls_xml_context.cpp | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/liborcus/xls_xml_context.cpp b/src/liborcus/xls_xml_context.cpp
+index 01f5dc9..abdd478 100644
+--- a/src/liborcus/xls_xml_context.cpp
++++ b/src/liborcus/xls_xml_context.cpp
+@@ -141,7 +141,8 @@ xls_xml_context::xls_xml_context(session_context& session_cxt, const tokens& tok
+     xml_context_base(session_cxt, tokens),
+     mp_factory(factory),
+     mp_cur_sheet(NULL),
+-    m_cur_row(0), m_cur_col(0), m_cur_cell_type(ct_unknown)
++    m_cur_row(0), m_cur_col(0), m_cur_cell_type(ct_unknown),
++    m_cur_cell_value(std::numeric_limits<double>::quiet_NaN())
+ {
+ }
+ 
+-- 
+2.3.5
+

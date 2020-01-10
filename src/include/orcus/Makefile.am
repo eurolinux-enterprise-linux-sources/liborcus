@@ -6,15 +6,20 @@ liborcus_HEADERS = \
 	cell_buffer.hpp	\
 	css_parser.hpp \
 	csv_parser.hpp \
+	csv_parser_base.hpp \
 	dom_tree.hpp \
 	env.hpp \
 	exception.hpp \
+	format_detection.hpp \
 	global.hpp \
+	interface.hpp \
+	measurement.hpp \
 	orcus_csv.hpp \
 	orcus_xml.hpp \
+	parser_global.hpp \
 	pstring.hpp \
 	sax_parser.hpp \
-	sax_parser_global.hpp \
+	sax_parser_base.hpp \
 	sax_ns_parser.hpp \
 	sax_token_parser.hpp \
 	stream.hpp \
@@ -39,6 +44,13 @@ liborcus_HEADERS += \
 	orcus_xlsx.hpp
 
 endif # WITH_XLSX_FILTER
+
+if WITH_XLS_XML_FILTER
+
+liborcus_HEADERS += \
+	orcus_xls_xml.hpp
+
+endif # WITH_XLS_XML_FILTER
 
 if WITH_GNUMERIC_FILTER
 

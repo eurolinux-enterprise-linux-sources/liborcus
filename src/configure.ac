@@ -7,8 +7,8 @@ AC_PREREQ([2.65])
 # Version informations
 # ====================
 m4_define([orcus_major_version], [0])
-m4_define([orcus_minor_version], [5])
-m4_define([orcus_micro_version], [1])
+m4_define([orcus_minor_version], [7])
+m4_define([orcus_micro_version], [0])
 m4_define([orcus_version], [orcus_major_version.orcus_minor_version.orcus_micro_version])
 
 # ================
@@ -22,7 +22,8 @@ m4_define([orcus_api_version], [orcus_major_version.orcus_minor_api_version])
 # =============
 AC_INIT([liborcus],[orcus_version])
 AC_CONFIG_MACRO_DIR([m4])
-AM_CONFIG_HEADER([config.h])
+m4_pattern_allow([^BOOST_])
+AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.11 foreign dist-bzip2 dist-xz])
 AM_SILENT_RULES([yes])
 AC_LANG([C++])
@@ -59,35 +60,21 @@ AC_FUNC_STRTOD
 AC_CHECK_FUNCS([gettimeofday])
 AC_DEFINE([_REENTRANT], [], [Enable reentrant.])
 AC_DEFINE([BOOST_ALL_NO_LIB], [], [Disable boost's evil autolink.])
-AX_BOOST_BASE
 
-# ===========================================================
-# Determine if we are going to need to link with Boost.System
-# ===========================================================
-dnl This seems to be necessary since boost 1.50 (1.48 does not need it,
-dnl 1.49 is untested). The macro BOOST_THREAD_DONT_USE_SYSTEM mentioned
-dnl in documentation has no effect.
-AC_MSG_CHECKING([if we need to link with Boost.System])
-AC_LANG_PUSH([C++])
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-@%:@include <boost/version.hpp>
-]], [[
-#if BOOST_VERSION >= 105000
-#   error yes, we need to link with Boost.System
-#endif
-]])],[
-        AC_MSG_RESULT([no])
-    ],[
-        AC_MSG_RESULT([yes])
-        AX_BOOST_SYSTEM
-    ])
-AC_LANG_POP([C++])
+# ======================
+# Set required ixion api
+# ======================
+IXION_REQUIRED_API_VERSION=0.8
+AC_SUBST(IXION_REQUIRED_API_VERSION)
 
 # =============
 # Set orcus api
 # =============
 ORCUS_API_VERSION=orcus_api_version
 AC_SUBST(ORCUS_API_VERSION)
+
+BOOST_REQUIRE([1.36])
+BOOST_SYSTEM
 
 # ==============
 # Werror support
@@ -125,8 +112,18 @@ AS_IF([test "x$enable_debug" != "xno"], [
 PKG_CHECK_MODULES([ZLIB], [zlib])
 
 # ==============
-# ods filter support
+# tools (binary)
 # ==============
+AC_ARG_WITH(tools,
+            AS_HELP_STRING([--without-tools],
+                           [Disables building of binary executable tools.]),
+	[with_tools="$withval"],
+	[with_tools=yes]
+)
+
+# ==================
+# ods filter support
+# ==================
 AC_ARG_WITH(ods-filter,
             AS_HELP_STRING([--without-ods-filter],
                            [Disables the OpenDocument Format spreadsheet import filter.]),
@@ -134,9 +131,9 @@ AC_ARG_WITH(ods-filter,
 	[with_ods_filter=yes]
 )
 
-# ==============
+# ===================
 # xlsx filter support
-# ==============
+# ===================
 AC_ARG_WITH(xlsx-filter,
             AS_HELP_STRING([--without-xlsx-filter],
                            [Disables the Microsoft Excel OOXML import filter.]),
@@ -144,9 +141,19 @@ AC_ARG_WITH(xlsx-filter,
 	[with_xlsx_filter=yes]
 )
 
-# ==============
+# ===================
+# xls xml filter support
+# ===================
+AC_ARG_WITH(xls-xml-filter,
+            AS_HELP_STRING([--without-xls-xml-filter],
+                           [Disables the Microsoft Excel XML import filter.]),
+	[with_xls_xml_filter="$withval"],
+	[with_xls_xml_filter=yes]
+)
+
+# =======================
 # gnumeric filter support
-# ==============
+# =======================
 AC_ARG_WITH(gnumeric-filter,
             AS_HELP_STRING([--without-gnumeric-filter],
                            [Disables the gnumeric import filter. The gnumeric import filter depends on zLib.]),
@@ -156,33 +163,24 @@ AC_ARG_WITH(gnumeric-filter,
 
 AM_CONDITIONAL([WITH_ODS_FILTER], [test "x$with_ods_filter" != "xno"])
 AM_CONDITIONAL([WITH_XLSX_FILTER], [test "x$with_xlsx_filter" != "xno"])
+AM_CONDITIONAL([WITH_XLS_XML_FILTER], [test "x$with_xls_xml_filter" != "xno"])
 AM_CONDITIONAL([WITH_GNUMERIC_FILTER], [test "x$with_gnumeric_filter" != "xno"])
+AM_CONDITIONAL([WITH_TOOLS], [test "x$with_tools" != "xno"])
+
+AS_IF([test "x$with_gnumeric_filter" != "xno"], [
+        BOOST_IOSTREAMS
+])
+
+AS_IF([test "x$with_tools" != "xno"], [
+        BOOST_PROGRAM_OPTIONS
+        BOOST_FILESYSTEM
+])
 
 # ============
 # mdds support
 # ============
-AC_ARG_WITH(mdds-include-path,
-	AS_HELP_STRING([--with-mdds-include-path], [Path for mdds, if different default [/usr/include].]),
-	[with_mdds_include_path="$withval"],
-	[with_mdds_include_path=default]
-,)
-AS_IF([test "x$with_mdds_include_path" != "xdefault"], [
-	# Check with other include path in mind
-	MDDS_CXXFLAGS="-I${with_mdds_include_path}"
-])
-# define for boost container
-MDDS_CPPFLAGS="-DMDDS_HASH_CONTAINER_BOOST"
-
-# Try to check for our desired header
-#save_CPPFLAGS="$CPPFLAGS"
-#save_CXXFLAGS="$CXXFLAGS"
-CPPFLAGS="$CPPFLAGS $MDDS_CPPFLAGS"
-CXXFLAGS="$CXXFLAGS $MDDS_CXXFLAGS"
-AC_CHECK_HEADERS([mdds/flat_segment_tree.hpp])
-# We do not restore here as we use mdds with this settings during the build.
-# Keeping the command here so none gets fancy ideas like adding it.
-#CPPFLAGS="$save_CPPFLAGS"
-#CXXFLAGS="$save_CXXFLAGS"
+PKG_CHECK_MODULES([MDDS],[mdds >= 0.8.0])
+CXXFLAGS="$CXXFLAGS -DMDDS_HASH_CONTAINER_BOOST"
 
 # =================
 # Spreadsheet model
@@ -194,13 +192,13 @@ AC_ARG_ENABLE(spreadsheet-model,
 	[enable_spreadsheet_model=yes]
 )
 AS_IF([test "x$enable_spreadsheet_model" != "xno"], [
-	PKG_CHECK_MODULES([LIBIXION],[libixion-0.6])
+	PKG_CHECK_MODULES([LIBIXION],[libixion-$IXION_REQUIRED_API_VERSION])
 ])
 AM_CONDITIONAL([BUILD_SPREADSHEET_MODEL], [test "x$enable_spreadsheet_model" != "xno"])
 
 AC_CONFIG_FILES([Makefile
-	liborcus.pc
-	liborcus-spreadsheet-model.pc
+	liborcus-$ORCUS_API_VERSION.pc:liborcus.pc.in
+	liborcus-spreadsheet-model-$ORCUS_API_VERSION.pc:liborcus-spreadsheet-model.pc.in
 	VERSION
 	include/Makefile
 	include/orcus/Makefile
@@ -222,11 +220,12 @@ AC_MSG_NOTICE([
 Build configuration:
 	debug:               $enable_debug
 	werror:              $enable_werror
-	mdds-include-dir:    $with_mdds_include_path
 	spreadsheet-model:   $enable_spreadsheet_model
         gnumeric-filter:     $with_gnumeric_filter
         ods-filter:          $with_ods_filter
         xlsx-filter:         $with_xlsx_filter
+        xls-xml-filter:      $with_xls_xml_filter
+        tools:               $with_tools
 ==============================================================================
 ])
 

@@ -1,90 +1,27 @@
-/*************************************************************************
- *
- * Copyright (c) 2011-2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
-#ifndef __ORCUS_CSV_PARSER_HPP__
-#define __ORCUS_CSV_PARSER_HPP__
+#ifndef ORCUS_CSV_PARSER_HPP
+#define ORCUS_CSV_PARSER_HPP
 
-#define ORCUS_DEBUG_CSV 0
-
-#include <cstdlib>
-#include <cstring>
-#include <exception>
-#include <string>
-#include <cassert>
-#include <sstream>
-
-#include "cell_buffer.hpp"
-
-#if ORCUS_DEBUG_CSV
-#include <iostream>
-using std::cout;
-using std::endl;
-#endif
+#include "csv_parser_base.hpp"
 
 namespace orcus {
 
-struct csv_parser_config
-{
-    std::string delimiters;
-    char text_qualifier;
-    bool trim_cell_value:1;
-
-    csv_parser_config() :
-        text_qualifier('\0'),
-        trim_cell_value(false) {}
-};
-
-class csv_parse_error : public std::exception
-{
-    std::string m_msg;
-public:
-    csv_parse_error(const std::string& msg) : m_msg(msg) {}
-    virtual ~csv_parse_error() throw() {}
-    virtual const char* what() const throw() { return m_msg.c_str(); }
-};
-
 template<typename _Handler>
-class csv_parser
+class csv_parser : public csv::parser_base
 {
 public:
     typedef _Handler handler_type;
 
-    csv_parser(const char* p, size_t n, handler_type& hdl, const csv_parser_config& config);
+    csv_parser(const char* p, size_t n, handler_type& hdl, const csv::parser_config& config);
     void parse();
 
 private:
-    bool has_char() const { return m_pos < m_length; }
-    bool has_next() const { return m_pos + 1 < m_length; }
-    void next();
-    char cur_char() const;
-    char next_char() const;
-
-    bool is_delim(char c) const;
-    bool is_text_qualifier(char c) const;
 
     // handlers
     void row();
@@ -92,30 +29,20 @@ private:
     void quoted_cell();
 
     void parse_cell_with_quote(const char* p0, size_t len0);
-    void skip_blanks();
 
     /**
      * Push cell value to the handler.
      */
     void push_cell_value(const char* p, size_t n);
 
-    static bool is_blank(char c)
-    {
-        return c == ' ' || c == '\t';
-    }
-
 private:
     handler_type& m_handler;
-    const csv_parser_config& m_config;
-    cell_buffer m_cell_buf;
-    const char* mp_char;
-    size_t m_pos;
-    size_t m_length;
 };
 
 template<typename _Handler>
-csv_parser<_Handler>::csv_parser(const char* p, size_t n, handler_type& hdl, const csv_parser_config& config) :
-    m_handler(hdl), m_config(config), mp_char(p), m_pos(0), m_length(n) {}
+csv_parser<_Handler>::csv_parser(
+    const char* p, size_t n, handler_type& hdl, const csv::parser_config& config) :
+    csv::parser_base(p, n, config), m_handler(hdl) {}
 
 template<typename _Handler>
 void csv_parser<_Handler>::parse()
@@ -131,37 +58,6 @@ void csv_parser<_Handler>::parse()
     while (has_char())
         row();
     m_handler.end_parse();
-}
-
-template<typename _Handler>
-void csv_parser<_Handler>::next()
-{
-    ++m_pos;
-    ++mp_char;
-}
-
-template<typename _Handler>
-char csv_parser<_Handler>::cur_char() const
-{
-    return *mp_char;
-}
-
-template<typename _Handler>
-char csv_parser<_Handler>::next_char() const
-{
-    return *(mp_char+1);
-}
-
-template<typename _Handler>
-bool csv_parser<_Handler>::is_delim(char c) const
-{
-    return m_config.delimiters.find(c) != std::string::npos;
-}
-
-template<typename _Handler>
-bool csv_parser<_Handler>::is_text_qualifier(char c) const
-{
-    return m_config.text_qualifier == c;
 }
 
 template<typename _Handler>
@@ -225,7 +121,6 @@ template<typename _Handler>
 void csv_parser<_Handler>::quoted_cell()
 {
 #if ORCUS_DEBUG_CSV
-    using namespace std;
     cout << "--- quoted cell" << endl;
 #endif
     char c = cur_char();
@@ -316,17 +211,7 @@ void csv_parser<_Handler>::parse_cell_with_quote(const char* p0, size_t len0)
     }
 
     // Stream ended prematurely.
-    throw csv_parse_error("stream ended prematurely while parsing quoted cell.");
-}
-
-template<typename _Handler>
-void csv_parser<_Handler>::skip_blanks()
-{
-    for (; has_char(); next())
-    {
-        if (!is_blank(*mp_char))
-            break;
-    }
+    throw csv::parse_error("stream ended prematurely while parsing quoted cell.");
 }
 
 template<typename _Handler>
@@ -367,3 +252,4 @@ void csv_parser<_Handler>::push_cell_value(const char* p, size_t n)
 }
 
 #endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

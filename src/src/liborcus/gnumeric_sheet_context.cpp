@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2010, 2011 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "gnumeric_sheet_context.hpp"
 #include "gnumeric_cell_context.hpp"
@@ -185,7 +165,7 @@ public:
             {
                 if (attr.value != "General")
                 {
-                    m_styles.set_number_format(attr.value.get(), attr.value.size());
+                    m_styles.set_number_format_code(attr.value.get(), attr.value.size());
                     size_t index = m_styles.commit_number_format();
                     m_styles.set_xf_number_format(index);
                 }
@@ -210,12 +190,79 @@ private:
     bool m_protection;
 };
 
+class gnumeric_col_row_info : public std::unary_function<xml_token_attr_t, void>
+{
+public:
+    gnumeric_col_row_info() :
+        m_position(0),
+        m_num_repeated(1),
+        m_size(0.0),
+        m_hidden(false) {}
+
+    void operator()(const xml_token_attr_t& attr)
+    {
+        switch (attr.name)
+        {
+            case XML_No:
+            {
+                size_t i = atoi(attr.value.get());
+                m_position = i;
+            }
+            break;
+            case XML_Unit:
+            {
+                double n = atof(attr.value.get());
+                m_size = n;
+            }
+            break;
+            case XML_Count:
+            {
+                size_t i = atoi(attr.value.get());
+                m_num_repeated = i;
+            }
+            break;
+            case XML_Hidden:
+            {
+                bool b = atoi(attr.value.get()) != 0;
+                m_hidden = b;
+            }
+        }
+    }
+
+    size_t get_position() const
+    {
+        return m_position;
+    }
+
+    size_t get_col_row_repeated() const
+    {
+        return m_num_repeated;
+    }
+
+    double get_size() const
+    {
+        return m_size;
+    }
+
+    bool is_hidden() const
+    {
+        return m_hidden;
+    }
+
+private:
+    size_t m_position;
+    size_t m_num_repeated;
+    double m_size;
+    bool m_hidden;
+
+};
+
 }
 
 
 gnumeric_sheet_context::gnumeric_sheet_context(
-    const tokens& tokens, spreadsheet::iface::import_factory* factory) :
-    xml_context_base(tokens),
+    session_context& session_cxt, const tokens& tokens, spreadsheet::iface::import_factory* factory) :
+    xml_context_base(session_cxt, tokens),
     mp_factory(factory),
     mp_sheet(0)
 {
@@ -233,10 +280,13 @@ bool gnumeric_sheet_context::can_handle_element(xmlns_id_t ns, xml_token_t name)
     return true;
 }
 
-xml_context_base* gnumeric_sheet_context::create_child_context(xmlns_id_t ns, xml_token_t name) const
+xml_context_base* gnumeric_sheet_context::create_child_context(xmlns_id_t ns, xml_token_t name)
 {
     if (ns == NS_gnumeric_gnm && name == XML_Cells)
-        return new gnumeric_cell_context(get_tokens(), mp_factory, mp_sheet);
+    {
+        mp_child.reset(new gnumeric_cell_context(get_session_context(), get_tokens(), mp_factory, mp_sheet));
+        return mp_child.get();
+    }
 
     return NULL;
 }
@@ -260,6 +310,12 @@ void gnumeric_sheet_context::start_element(xmlns_id_t ns, xml_token_t name, cons
             break;
             case XML_StyleRegion:
                 start_style_region(attrs);
+            break;
+            case XML_ColInfo:
+                start_col(attrs);
+            break;
+            case XML_RowInfo:
+                start_row(attrs);
             break;
             default:
                 ;
@@ -296,7 +352,7 @@ bool gnumeric_sheet_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void gnumeric_sheet_context::characters(const pstring& str)
+void gnumeric_sheet_context::characters(const pstring& str, bool transient)
 {
     chars = str;
 }
@@ -304,6 +360,36 @@ void gnumeric_sheet_context::characters(const pstring& str)
 void gnumeric_sheet_context::start_font(const xml_attrs_t& attrs)
 {
     for_each(attrs.begin(), attrs.end(), gnumeric_font_attr_parser(*mp_factory->get_styles()));
+}
+
+void gnumeric_sheet_context::start_col(const xml_attrs_t& attrs)
+{
+    gnumeric_col_row_info col_info = for_each(attrs.begin(), attrs.end(),
+            gnumeric_col_row_info());
+    spreadsheet::iface::import_sheet_properties* p_sheet_props = mp_sheet->get_sheet_properties();
+    double col_size = col_info.get_size();
+    bool hidden = col_info.is_hidden();
+    for (size_t i = col_info.get_position(),
+            n = col_info.get_col_row_repeated() + col_info.get_position(); i < n; ++i)
+    {
+        p_sheet_props->set_column_width(i, col_size, length_unit_point);
+        p_sheet_props->set_column_hidden(i, hidden);
+    }
+}
+
+void gnumeric_sheet_context::start_row(const xml_attrs_t& attrs)
+{
+    gnumeric_col_row_info row_info = for_each(attrs.begin(), attrs.end(),
+            gnumeric_col_row_info());
+    spreadsheet::iface::import_sheet_properties* p_sheet_props = mp_sheet->get_sheet_properties();
+    double row_size = row_info.get_size();
+    bool hidden = row_info.is_hidden();
+    for (size_t i = row_info.get_position(),
+            n = row_info.get_col_row_repeated() + row_info.get_position(); i < n; ++i)
+    {
+        p_sheet_props->set_row_height(i, row_size, length_unit_point);
+        p_sheet_props->set_row_hidden(i, hidden);
+    }
 }
 
 void gnumeric_sheet_context::start_style(const xml_attrs_t& attrs)
@@ -363,3 +449,4 @@ void gnumeric_sheet_context::end_style_region()
 }
 
 }
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #ifndef __ORCUS_XML_MAP_SAX_HANDLER_HPP__
 #define __ORCUS_XML_MAP_SAX_HANDLER_HPP__
@@ -43,15 +23,6 @@ class orcus_xml;
  */
 class xml_map_sax_handler
 {
-    struct attr
-    {
-        pstring ns;
-        pstring name;
-        pstring val;
-
-        attr(const pstring& _ns, const pstring& _name, const pstring& _val);
-    };
-
     struct scope
     {
         pstring ns;
@@ -60,18 +31,20 @@ class xml_map_sax_handler
         scope(const pstring& _ns, const pstring& _name);
     };
 
-    std::vector<attr> m_attrs;
+    std::vector<sax::parser_attribute> m_attrs;
     std::vector<scope> m_scopes;
     orcus_xml& m_app;
 
 public:
     xml_map_sax_handler(orcus_xml& app);
 
-    void declaration();
-    void start_element(const sax_parser_element& elem);
-    void end_element(const sax_parser_element& elem);
-    void characters(const pstring&);
-    void attribute(const pstring& ns, const pstring& name, const pstring& val);
+    void doctype(const sax::doctype_declaration&);
+    void start_declaration(const pstring& name);
+    void end_declaration(const pstring& name);
+    void start_element(const sax::parser_element& elem);
+    void end_element(const sax::parser_element& elem);
+    void characters(const pstring&, bool);
+    void attribute(const sax::parser_attribute& attr);
 };
 
 void read_map_file(orcus_xml& app, const char* filepath);
@@ -79,3 +52,4 @@ void read_map_file(orcus_xml& app, const char* filepath);
 }
 
 #endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

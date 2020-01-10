@@ -1,0 +1,52 @@
+From da5d99c57ecdf54b40c248a109969021b70f5a38 Mon Sep 17 00:00:00 2001
+From: David Tardon <dtardon@redhat.com>
+Date: Mon, 4 May 2015 17:49:37 +0200
+Subject: [PATCH] do not let main() throw
+
+---
+ src/orcus_detect_main.cpp | 18 ++++++++----------
+ 1 file changed, 8 insertions(+), 10 deletions(-)
+
+diff --git a/src/orcus_detect_main.cpp b/src/orcus_detect_main.cpp
+index 2a9f082..2f4110f 100644
+--- a/src/orcus_detect_main.cpp
++++ b/src/orcus_detect_main.cpp
+@@ -16,22 +16,14 @@
+ using namespace orcus;
+ using namespace std;
+ 
+-int main(int argc, char** argv)
++int main(int argc, char** argv) try
+ {
+     if (argc != 2)
+         return EXIT_FAILURE;
+ 
+     const char* filepath = argv[1];
+     string strm;
+-    try
+-    {
+-        load_file_content(filepath, strm);
+-    }
+-    catch (const general_error& e)
+-    {
+-        cerr << e.what() << endl;
+-        return EXIT_FAILURE;
+-    }
++    load_file_content(filepath, strm);
+ 
+     if (strm.empty())
+     {
+@@ -67,4 +59,10 @@ int main(int argc, char** argv)
+ 
+     return EXIT_SUCCESS;
+ }
++catch (const general_error& e)
++{
++    cerr << e.what() << endl;
++    return EXIT_FAILURE;
++}
++
+ /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
+-- 
+2.3.5
+

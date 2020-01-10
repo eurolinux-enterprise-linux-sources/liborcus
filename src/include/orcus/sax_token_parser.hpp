@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2010-2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #ifndef __ORCUS_SAX_TOKEN_PARSER_HPP__
 #define __ORCUS_SAX_TOKEN_PARSER_HPP__
@@ -105,7 +85,11 @@ private:
         handler_wrapper(const tokens_map& tokens, handler_type& handler) :
             m_tokens(tokens), m_handler(handler) {}
 
-        void declaration()
+        void doctype(const sax::doctype_declaration&) {}
+
+        void start_declaration(const pstring&) {}
+
+        void end_declaration(const pstring&)
         {
             m_elem.attrs.clear();
         }
@@ -125,9 +109,9 @@ private:
             m_handler.end_element(m_elem);
         }
 
-        void characters(const pstring& val)
+        void characters(const pstring& val, bool transient)
         {
-            m_handler.characters(val);
+            m_handler.characters(val, transient);
         }
 
         void attribute(const pstring& /*name*/, const pstring& /*val*/)
@@ -137,7 +121,9 @@ private:
 
         void attribute(const sax_ns_parser_attribute& attr)
         {
-            m_elem.attrs.push_back(xml_token_attr_t(attr.ns, tokenize(attr.name), attr.value));
+            m_elem.attrs.push_back(
+               xml_token_attr_t(
+                  attr.ns, tokenize(attr.name), attr.value, attr.transient));
         }
 
     private:
@@ -180,3 +166,4 @@ void sax_token_parser<_Handler,_Tokens>::parse()
 }
 
 #endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "orcus/orcus_xml.hpp"
 #include "orcus/global.hpp"
@@ -31,8 +11,8 @@
 #include "orcus/xml_namespace.hpp"
 #include "orcus/stream.hpp"
 
-#include "spreadsheet/factory.hpp"
-#include "spreadsheet/document.hpp"
+#include "orcus/spreadsheet/factory.hpp"
+#include "orcus/spreadsheet/document.hpp"
 
 #include "xml_map_sax_handler.hpp"
 #include "dom_tree_sax_handler.hpp"
@@ -60,14 +40,14 @@ struct test_case
 
 const test_case tests[] =
 {
-    { "../test/xml-mapped/attribute-basic", true },
-    { "../test/xml-mapped/attribute-namespace", true },
-    { "../test/xml-mapped/attribute-range-self-close", true },
-    { "../test/xml-mapped/attribute-single-element", true },
-    { "../test/xml-mapped/attribute-single-element-2", true },
-    { "../test/xml-mapped/content-basic", true },
-    { "../test/xml-mapped/content-namespace", false },
-    { "../test/xml-mapped/content-namespace-2", true },
+    { SRCDIR"/test/xml-mapped/attribute-basic", true },
+    { SRCDIR"/test/xml-mapped/attribute-namespace", true },
+    { SRCDIR"/test/xml-mapped/attribute-range-self-close", true },
+    { SRCDIR"/test/xml-mapped/attribute-single-element", true },
+    { SRCDIR"/test/xml-mapped/attribute-single-element-2", true },
+    { SRCDIR"/test/xml-mapped/content-basic", true },
+    { SRCDIR"/test/xml-mapped/content-namespace", false },
+    { SRCDIR"/test/xml-mapped/content-namespace-2", true },
 };
 
 const char* temp_output_xml = "out.xml";
@@ -126,7 +106,7 @@ void test_mapped_xml_import()
         assert(p1 == p2);
 
         // Output to xml file with the linked values coming from the document.
-        string out_file = base_dir + "/" + temp_output_xml;
+        string out_file = temp_output_xml;
         cout << "writing to " << out_file << endl;
         app.write_file(out_file.c_str());
 
@@ -155,3 +135,4 @@ int main()
     test_mapped_xml_import();
     return EXIT_SUCCESS;
 }
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

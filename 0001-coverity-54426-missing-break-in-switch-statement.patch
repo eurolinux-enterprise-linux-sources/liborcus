@@ -1,0 +1,24 @@
+From 1fc8d8e249ee49b61d159ff9a168de4ff216316c Mon Sep 17 00:00:00 2001
+From: Markus Mohrhard <markus.mohrhard@googlemail.com>
+Date: Tue, 9 Sep 2014 00:30:45 +0200
+Subject: [PATCH] coverity#54426 missing break in switch statement
+
+---
+ src/liborcus/xlsx_sheet_context.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/liborcus/xlsx_sheet_context.cpp b/src/liborcus/xlsx_sheet_context.cpp
+index 3f11e79..abdf088 100644
+--- a/src/liborcus/xlsx_sheet_context.cpp
++++ b/src/liborcus/xlsx_sheet_context.cpp
+@@ -105,6 +105,7 @@ public:
+                 m_height.value = to_double(attr.value);
+                 m_height.unit = length_unit_point;
+             }
++            break;
+             case XML_hidden:
+                 m_hidden = to_long(attr.value) != 0;
+             break;
+-- 
+2.3.4
+

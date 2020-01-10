@@ -1,57 +1,59 @@
-/*************************************************************************
- *
- * Copyright (c) 2010 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #ifndef __ORCUS_XMLCONTEXT_HPP__
 #define __ORCUS_XMLCONTEXT_HPP__
 
 #include "xml_stream_handler.hpp"
 
+#include <boost/noncopyable.hpp>
+
 namespace orcus {
 
+struct session_context;
 class tokens;
 
 typedef ::std::pair<xmlns_id_t, xml_token_t> xml_token_pair_t;
 typedef ::std::vector<xml_token_pair_t>         xml_elem_stack_t;
 
-class xml_context_base
+class xml_context_base : boost::noncopyable
 {
 public:
-    xml_context_base(const tokens& tokens);
+    xml_context_base(session_context& session_cxt, const tokens& tokens);
     virtual ~xml_context_base() = 0;
 
     virtual bool can_handle_element(xmlns_id_t ns, xml_token_t name) const = 0;
-    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) const = 0;
+    virtual xml_context_base* create_child_context(xmlns_id_t ns, xml_token_t name) = 0;
     virtual void end_child_context(xmlns_id_t ns, xml_token_t name, xml_context_base* child) = 0;
 
     virtual void start_element(xmlns_id_t ns, xml_token_t name, const ::std::vector<xml_token_attr_t>& attrs) = 0;
+
+    /**
+     * Called on closing element.
+     *
+     * @param ns namespace token
+     * @param name element name
+     *
+     * @return true if the base element of the context is closing, false
+     *         otherwise.
+     */
     virtual bool end_element(xmlns_id_t ns, xml_token_t name) = 0;
-    virtual void characters(const pstring& str) = 0;
+
+    /**
+     * Called when passing xml content.  When the content value is transient,
+     * the value is not expected to survive beyond the scope of the callback.
+     *
+     * @param str content value.
+     * @param transient whether or not the value is transient.
+     */
+    virtual void characters(const pstring& str, bool transient) = 0;
 
 protected:
+    session_context& get_session_context();
     const tokens& get_tokens() const;
     xml_token_pair_t push_stack(xmlns_id_t ns, xml_token_t name);
     bool pop_stack(xmlns_id_t ns, xml_token_t name);
@@ -80,6 +82,7 @@ protected:
         const xml_token_pair_t& elem, const xml_elem_stack_t& expected_elems);
 
 private:
+    session_context& m_session_cxt;
     const tokens& m_tokens;
     xml_elem_stack_t m_stack;
 };
@@ -88,3 +91,4 @@ private:
 }
 
 #endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

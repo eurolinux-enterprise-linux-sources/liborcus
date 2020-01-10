@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #ifndef __ORCUS_SAX_NS_PARSER_HPP__
 #define __ORCUS_SAX_NS_PARSER_HPP__
@@ -51,6 +31,7 @@ struct sax_ns_parser_attribute
     pstring ns_alias; // attribute namespace alias
     pstring name;     // attribute name
     pstring value;    // attribute value
+    bool transient;   // whether or not the attribute value is transient.
 };
 
 namespace __sax {
@@ -137,15 +118,26 @@ private:
         bool m_declaration;
 
     public:
-        handler_wrapper(xmlns_context& ns_cxt, handler_type& handler) : m_ns_cxt(ns_cxt), m_handler(handler), m_declaration(true) {}
+        handler_wrapper(xmlns_context& ns_cxt, handler_type& handler) : m_ns_cxt(ns_cxt), m_handler(handler), m_declaration(false) {}
 
-        void declaration()
+        void doctype(const sax::doctype_declaration& dtd)
         {
-            m_declaration = false;
-            m_handler.declaration();
+            m_handler.doctype(dtd);
         }
 
-        void start_element(const sax_parser_element& elem)
+        void start_declaration(const pstring& name)
+        {
+            m_declaration = true;
+            m_handler.start_declaration(name);
+        }
+
+        void end_declaration(const pstring& name)
+        {
+            m_declaration = false;
+            m_handler.end_declaration(name);
+        }
+
+        void start_element(const sax::parser_element& elem)
         {
             m_scopes.push_back(new __sax::elem_scope);
             __sax::elem_scope& scope = m_scopes.back();
@@ -163,11 +155,11 @@ private:
             m_attrs.clear();
         }
 
-        void end_element(const sax_parser_element& elem)
+        void end_element(const sax::parser_element& elem)
         {
             __sax::elem_scope& scope = m_scopes.back();
             if (scope.ns != m_ns_cxt.get(elem.ns) || scope.name != elem.name)
-                throw malformed_xml_error("mis-matching closing element.");
+                throw sax::malformed_xml_error("mis-matching closing element.");
 
             m_elem.ns = scope.ns;
             m_elem.ns_alias = elem.ns;
@@ -182,48 +174,49 @@ private:
             m_scopes.pop_back();
         }
 
-        void characters(const pstring& val)
+        void characters(const pstring& val, bool transient)
         {
-            m_handler.characters(val);
+            m_handler.characters(val, transient);
         }
 
-        void attribute(const pstring& ns, const pstring& name, const pstring& val)
+        void attribute(const sax::parser_attribute& attr)
         {
             if (m_declaration)
             {
                 // XML declaration attribute.  Pass it through to the handler without namespace.
-                m_handler.attribute(name, val);
+                m_handler.attribute(attr.name, attr.value);
                 return;
             }
 
-            if (m_attrs.count(__sax::entity_name(ns, name)) > 0)
-                throw malformed_xml_error("You can't define two attributes of the same name in the same element.");
+            if (m_attrs.count(__sax::entity_name(attr.ns, attr.name)) > 0)
+                throw sax::malformed_xml_error("You can't define two attributes of the same name in the same element.");
 
-            m_attrs.insert(__sax::entity_name(ns, name));
+            m_attrs.insert(__sax::entity_name(attr.ns, attr.name));
 
-            if (ns.empty() && name == "xmlns")
+            if (attr.ns.empty() && attr.name == "xmlns")
             {
                 // Default namespace
-                m_ns_cxt.push(pstring(), val);
+                m_ns_cxt.push(pstring(), attr.value);
                 m_ns_keys.insert(pstring());
                 return;
             }
 
-            if (ns == "xmlns")
+            if (attr.ns == "xmlns")
             {
                 // Namespace alias
-                if (!name.empty())
+                if (!attr.name.empty())
                 {
-                    m_ns_cxt.push(name, val);
-                    m_ns_keys.insert(name);
+                    m_ns_cxt.push(attr.name, attr.value);
+                    m_ns_keys.insert(attr.name);
                 }
                 return;
             }
 
-            m_attr.ns = m_ns_cxt.get(ns);
-            m_attr.ns_alias = ns;
-            m_attr.name = name;
-            m_attr.value = val;
+            m_attr.ns = m_ns_cxt.get(attr.ns);
+            m_attr.ns_alias = attr.ns;
+            m_attr.name = attr.name;
+            m_attr.value = attr.value;
+            m_attr.transient = attr.transient;
             m_handler.attribute(m_attr);
         }
     };
@@ -254,3 +247,4 @@ void sax_ns_parser<_Handler>::parse()
 }
 
 #endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

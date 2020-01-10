@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "orcus/dom_tree.hpp"
 #include "orcus/exception.hpp"
@@ -35,6 +15,7 @@
 #include <sstream>
 
 #include <boost/noncopyable.hpp>
+#include <boost/unordered_map.hpp>
 
 using namespace std;
 
@@ -63,6 +44,8 @@ void escape(ostream& os, const pstring& val)
     }
 }
 
+typedef boost::unordered_map<pstring, dom_tree::attrs_type, pstring::hash> declarations_type;
+
 }
 
 struct dom_tree_impl
@@ -70,6 +53,8 @@ struct dom_tree_impl
     xmlns_context& m_ns_cxt;
     string_pool m_pool;
 
+    pstring m_cur_decl_name;
+    declarations_type m_decls;
     dom_tree::attrs_type m_doc_attrs;
     dom_tree::attrs_type m_cur_attrs;
     dom_tree::element_stack_type m_elem_stack;
@@ -136,9 +121,32 @@ dom_tree::dom_tree(xmlns_context& cxt) : mp_impl(new dom_tree_impl(cxt)) {}
 
 dom_tree::~dom_tree() { delete mp_impl; }
 
-void dom_tree::end_declaration()
+void dom_tree::start_declaration(const pstring& name)
 {
-    mp_impl->m_doc_attrs.swap(mp_impl->m_cur_attrs);
+    mp_impl->m_cur_decl_name = name;
+}
+
+void dom_tree::end_declaration(const pstring& name)
+{
+    assert(mp_impl->m_cur_decl_name == name);
+    declarations_type& decls = mp_impl->m_decls;
+    declarations_type::iterator it = decls.find(name);
+    if (it == decls.end())
+    {
+        // Insert a new entry for this name.
+        std::pair<declarations_type::iterator,bool> r =
+            decls.insert(
+                declarations_type::value_type(
+                    mp_impl->m_pool.intern(name).first, mp_impl->m_cur_attrs));
+
+        if (!r.second)
+            // Insertion failed.
+            throw general_error("dom_tree::end_declaration: failed to insert a new declaration entry.");
+    }
+    else
+        it->second = mp_impl->m_cur_attrs;
+
+    mp_impl->m_cur_attrs.clear();
 }
 
 void dom_tree::start_element(xmlns_id_t ns, const pstring& name)
@@ -196,6 +204,12 @@ void dom_tree::set_attribute(xmlns_id_t ns, const pstring& name, const pstring& 
     pstring val2 = mp_impl->m_pool.intern(val).first;
 
     mp_impl->m_cur_attrs.push_back(attr(ns, name2, val2));
+}
+
+const dom_tree::attrs_type* dom_tree::get_declaration_attributes(const pstring& name) const
+{
+    declarations_type::const_iterator it = mp_impl->m_decls.find(name);
+    return it == mp_impl->m_decls.end() ? NULL : &it->second;
 }
 
 namespace {
@@ -325,3 +339,4 @@ void dom_tree::dump_compact(ostream& os) const
 }
 
 }
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

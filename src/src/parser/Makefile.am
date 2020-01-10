@@ -8,9 +8,11 @@ liborcus_parser_@ORCUS_API_VERSION@_la_SOURCES = \
 	win_stdint.h \
 	base64.cpp \
 	cell_buffer.cpp \
+	csv_parser_base.cpp \
 	exception.cpp \
+	parser_global.cpp \
 	pstring.cpp \
-	sax_parser_global.cpp \
+	sax_parser_base.cpp \
 	stream.cpp \
 	string_pool.cpp \
 	types.cpp \
@@ -18,12 +20,14 @@ liborcus_parser_@ORCUS_API_VERSION@_la_SOURCES = \
 	zip_archive.cpp \
 	zip_archive_stream.cpp
 
+
 liborcus_parser_@ORCUS_API_VERSION@_la_LDFLAGS = -no-undefined
 liborcus_parser_@ORCUS_API_VERSION@_la_LIBADD = \
-	 $(ZLIB_LIBS)
+						$(BOOST_SYSTEM_LIBS) \
+						$(ZLIB_LIBS)
 
 EXTRA_PROGRAMS = \
-	parser-test-string-pool \
+		parser-test-string-pool \
 	parser-test-xml-namespace \
 	parser-test-base64
 
@@ -57,3 +61,7 @@ TESTS = \
 	parser-test-string-pool \
 	parser-test-xml-namespace \
 	parser-test-base64
+
+distclean-local:
+	rm -rf $(TESTS)
+

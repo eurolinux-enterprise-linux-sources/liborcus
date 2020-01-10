@@ -1,29 +1,9 @@
-/*************************************************************************
- *
- * Copyright (c) 2010, 2011 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "orcus/orcus_xlsx.hpp"
 
@@ -41,6 +21,8 @@
 #include "xml_simple_stream_handler.hpp"
 #include "opc_reader.hpp"
 #include "ooxml_namespace_types.hpp"
+#include "xlsx_session_data.hpp"
+#include "opc_context.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -106,13 +88,17 @@ public:
 
 struct orcus_xlsx_impl
 {
+    session_context m_cxt;
     xmlns_repository m_ns_repo;
     spreadsheet::iface::import_factory* mp_factory;
     xlsx_opc_handler m_opc_handler;
     opc_reader m_opc_reader;
 
     orcus_xlsx_impl(spreadsheet::iface::import_factory* factory, orcus_xlsx& parent) :
-        mp_factory(factory), m_opc_handler(parent), m_opc_reader(m_ns_repo, m_opc_handler) {}
+        m_cxt(new xlsx_session_data),
+        mp_factory(factory),
+        m_opc_handler(parent),
+        m_opc_reader(m_ns_repo, m_cxt, m_opc_handler) {}
 };
 
 orcus_xlsx::orcus_xlsx(spreadsheet::iface::import_factory* factory) :
@@ -127,10 +113,116 @@ orcus_xlsx::~orcus_xlsx()
     delete mp_impl;
 }
 
-void orcus_xlsx::read_file(const char* fpath)
+bool orcus_xlsx::detect(const unsigned char* blob, size_t size)
 {
-    mp_impl->m_opc_reader.read_file(fpath);
+    zip_archive_stream_blob stream(blob, size);
+    zip_archive archive(&stream);
+    try
+    {
+        archive.load();
+    }
+    catch (const zip_error&)
+    {
+        // Not a valid zip archive.
+        return false;
+    }
+
+    // Find and parse [Content_Types].xml which is required for OPC package.
+    vector<unsigned char> buf;
+    if (!archive.read_file_entry("[Content_Types].xml", buf))
+        // Failed to read the contnet types entry.
+        return false;
+
+    if (buf.empty())
+        return false;
+
+    xmlns_repository ns_repo;
+    ns_repo.add_predefined_values(NS_opc_all);
+    session_context session_cxt;
+    xml_stream_parser parser(ns_repo, opc_tokens, reinterpret_cast<const char*>(&buf[0]), buf.size(), "[Content_Types].xml");
+
+    xml_simple_stream_handler handler(new opc_content_types_context(session_cxt, opc_tokens));
+    parser.set_handler(&handler);
+    parser.parse();
+
+    opc_content_types_context& context =
+        static_cast<opc_content_types_context&>(handler.get_context());
+
+    std::vector<xml_part_t> parts;
+    context.pop_parts(parts);
+
+    if (parts.empty())
+        return false;
+
+    // See if we can find the workbook stream.
+    xml_part_t workbook_part("/xl/workbook.xml", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
+    return std::find(parts.begin(), parts.end(), workbook_part) != parts.end();
+}
+
+void orcus_xlsx::read_file(const string& filepath)
+{
+    mp_impl->m_opc_reader.read_file(filepath.c_str());
+
+    // Formulas need to be inserted to the document after the shared string
+    // table get imported, because tokenization of formulas may add new shared
+    // string instances.
+    set_formulas_to_doc();
+
     mp_impl->mp_factory->finalize();
+}
+
+const char* orcus_xlsx::get_name() const
+{
+    static const char* name = "xlsx";
+    return name;
+}
+
+void orcus_xlsx::set_formulas_to_doc()
+{
+    xlsx_session_data& sdata = static_cast<xlsx_session_data&>(*mp_impl->m_cxt.mp_data);
+
+    // Insert shared formulas first.
+    xlsx_session_data::shared_formulas_type::iterator its = sdata.m_shared_formulas.begin(), its_end = sdata.m_shared_formulas.end();
+    for (; its != its_end; ++its)
+    {
+        xlsx_session_data::shared_formula& sf = *its;
+        spreadsheet::iface::import_sheet* sheet = mp_impl->mp_factory->get_sheet(sf.sheet);
+        if (!sheet)
+            continue;
+
+        if (sf.master)
+        {
+            sheet->set_shared_formula(
+                sf.row, sf.column, orcus::spreadsheet::xlsx_2007, sf.identifier,
+                &sf.formula[0], sf.formula.size(), &sf.range[0], sf.range.size());
+        }
+        else
+        {
+            sheet->set_shared_formula(sf.row, sf.column, sf.identifier);
+        }
+    }
+
+    // Insert regular (non-shared) formulas.
+    xlsx_session_data::formulas_type::iterator it = sdata.m_formulas.begin(), it_end = sdata.m_formulas.end();
+    for (; it != it_end; ++it)
+    {
+        xlsx_session_data::formula& f = *it;
+        spreadsheet::iface::import_sheet* sheet = mp_impl->mp_factory->get_sheet(f.sheet);
+        if (!sheet)
+            continue;
+
+        if (f.array)
+        {
+            sheet->set_array_formula(
+                f.row, f.column, spreadsheet::xlsx_2007, &f.exp[0],
+                f.exp.size(), &f.range[0], f.range.size());
+        }
+        else
+        {
+            sheet->set_formula(
+                f.row, f.column, orcus::spreadsheet::xlsx_2007, &f.exp[0], f.exp.size());
+        }
+    }
 }
 
 void orcus_xlsx::read_workbook(const string& dir_path, const string& file_name)
@@ -146,7 +238,7 @@ void orcus_xlsx::read_workbook(const string& dir_path, const string& file_name)
         return;
 
     ::boost::scoped_ptr<xml_simple_stream_handler> handler(
-        new xml_simple_stream_handler(new xlsx_workbook_context(ooxml_tokens)));
+        new xml_simple_stream_handler(new xlsx_workbook_context(mp_impl->m_cxt, ooxml_tokens)));
 
     xml_stream_parser parser(mp_impl->m_ns_repo, ooxml_tokens, reinterpret_cast<const char*>(&buffer[0]), buffer.size(), filepath);
     parser.set_handler(handler.get());
@@ -164,6 +256,10 @@ void orcus_xlsx::read_workbook(const string& dir_path, const string& file_name)
 
 void orcus_xlsx::read_sheet(const string& dir_path, const string& file_name, const xlsx_rel_sheet_info* data)
 {
+    if (!data || !data->id)
+        // Sheet ID must not be 0.
+        return;
+
     cout << "---" << endl;
     string filepath = dir_path + file_name;
     cout << "read_sheet: file path = " << filepath << endl;
@@ -175,16 +271,13 @@ void orcus_xlsx::read_sheet(const string& dir_path, const string& file_name, con
     if (buffer.empty())
         return;
 
-    if (data)
-    {
-        cout << "relationship sheet data: " << endl;
-        cout << "  sheet name: " << data->name << "  sheet ID: " << data->id << endl;
-    }
+    cout << "relationship sheet data: " << endl;
+    cout << "  sheet name: " << data->name << "  sheet ID: " << data->id << endl;
 
     xml_stream_parser parser(mp_impl->m_ns_repo, ooxml_tokens, reinterpret_cast<const char*>(&buffer[0]), buffer.size(), file_name);
     spreadsheet::iface::import_sheet* sheet = mp_impl->mp_factory->append_sheet(data->name.get(), data->name.size());
-    ::boost::scoped_ptr<xlsx_sheet_xml_handler> handler(new xlsx_sheet_xml_handler(ooxml_tokens, sheet));
-    parser.set_handler(handler.get());
+    xlsx_sheet_xml_handler handler(mp_impl->m_cxt, ooxml_tokens, data->id-1, sheet);
+    parser.set_handler(&handler);
     parser.parse();
 
     mp_impl->m_opc_reader.check_relation_part(file_name, NULL);
@@ -206,7 +299,7 @@ void orcus_xlsx::read_shared_strings(const string& dir_path, const string& file_
     xml_stream_parser parser(mp_impl->m_ns_repo, ooxml_tokens, reinterpret_cast<const char*>(&buffer[0]), buffer.size(), file_name);
     ::boost::scoped_ptr<xml_simple_stream_handler> handler(
         new xml_simple_stream_handler(
-            new xlsx_shared_strings_context(ooxml_tokens, mp_impl->mp_factory->get_shared_strings())));
+            new xlsx_shared_strings_context(mp_impl->m_cxt, ooxml_tokens, mp_impl->mp_factory->get_shared_strings())));
     parser.set_handler(handler.get());
     parser.parse();
 }
@@ -232,7 +325,7 @@ void orcus_xlsx::read_styles(const string& dir_path, const string& file_name)
     xml_stream_parser parser(mp_impl->m_ns_repo, ooxml_tokens, reinterpret_cast<const char*>(&buffer[0]), buffer.size(), file_name);
     ::boost::scoped_ptr<xml_simple_stream_handler> handler(
         new xml_simple_stream_handler(
-            new xlsx_styles_context(ooxml_tokens, mp_impl->mp_factory->get_styles())));
+            new xlsx_styles_context(mp_impl->m_cxt, ooxml_tokens, mp_impl->mp_factory->get_styles())));
 //      xlsx_styles_context& context =
 //          static_cast<xlsx_styles_context&>(handler->get_context());
     parser.set_handler(handler.get());
@@ -240,3 +333,4 @@ void orcus_xlsx::read_styles(const string& dir_path, const string& file_name)
 }
 
 }
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

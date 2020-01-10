@@ -1,35 +1,16 @@
-/*************************************************************************
- *
- * Copyright (c) 2010-2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "opc_context.hpp"
 #include "opc_token_constants.hpp"
 #include "ooxml_content_types.hpp"
 #include "ooxml_namespace_types.hpp"
 #include "ooxml_schemas.hpp"
+#include "session_context.hpp"
 
 #include "orcus/exception.hpp"
 #include "orcus/global.hpp"
@@ -93,8 +74,8 @@ private:
 
 }
 
-opc_content_types_context::opc_content_types_context(const tokens& _tokens) :
-    xml_context_base(_tokens)
+opc_content_types_context::opc_content_types_context(session_context& session_cxt, const tokens& _tokens) :
+    xml_context_base(session_cxt, _tokens)
 {
     // build content type cache.
     for (const content_type_t* p = CT_all; *p; ++p)
@@ -110,7 +91,7 @@ bool opc_content_types_context::can_handle_element(xmlns_id_t ns, xml_token_t na
     return true;
 }
 
-xml_context_base* opc_content_types_context::create_child_context(xmlns_id_t ns, xml_token_t name) const
+xml_context_base* opc_content_types_context::create_child_context(xmlns_id_t ns, xml_token_t name)
 {
     return NULL;
 }
@@ -140,8 +121,9 @@ void opc_content_types_context::start_element(xmlns_id_t ns, xml_token_t name, c
             // We need to use allocated strings for part names here because
             // the part names need to survive after the [Content_Types].xml
             // stream is destroyed.
+            pstring part_name = get_session_context().m_string_pool.intern(func.get_name()).first;
             m_parts.push_back(
-                xml_part_t(func.get_name().intern(), func.get_content_type()));
+                xml_part_t(part_name, func.get_content_type()));
         }
         break;
         case XML_Default:
@@ -152,8 +134,9 @@ void opc_content_types_context::start_element(xmlns_id_t ns, xml_token_t name, c
 
             // Like the part names, we need to use allocated strings for
             // extension names.
+            pstring ext_name = get_session_context().m_string_pool.intern(func.get_name()).first;
             m_ext_defaults.push_back(
-                xml_part_t(func.get_name().intern(), func.get_content_type()));
+                xml_part_t(ext_name, func.get_content_type()));
         }
         break;
         default:
@@ -166,7 +149,7 @@ bool opc_content_types_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void opc_content_types_context::characters(const pstring &str)
+void opc_content_types_context::characters(const pstring &str, bool transient)
 {
 }
 
@@ -187,8 +170,8 @@ namespace {
 class rel_attr_parser : public unary_function<void, xml_token_attr_t>
 {
 public:
-    rel_attr_parser(const opc_relations_context::schema_cache_type* cache) :
-        mp_schema_cache(cache) {}
+    rel_attr_parser(session_context* cxt, const opc_relations_context::schema_cache_type* cache) :
+        m_cxt(cxt), mp_schema_cache(cache) {}
 
     void operator() (const xml_token_attr_t& attr)
     {
@@ -198,13 +181,13 @@ public:
         switch (attr.name)
         {
             case XML_Target:
-                m_rel.target = attr.value.intern();
+                m_rel.target = m_cxt->m_string_pool.intern(attr.value).first;
             break;
             case XML_Type:
                 m_rel.type = to_schema(attr.value);
             break;
             case XML_Id:
-                m_rel.rid = attr.value.intern();
+                m_rel.rid = m_cxt->m_string_pool.intern(attr.value).first;
             break;
         }
     }
@@ -226,6 +209,7 @@ private:
     }
 
 private:
+    session_context* m_cxt;
     const opc_relations_context::schema_cache_type* mp_schema_cache;
     opc_rel_t m_rel;
 };
@@ -254,8 +238,8 @@ struct compare_rels : binary_function<bool, opc_rel_t, opc_rel_t>
 
 }
 
-opc_relations_context::opc_relations_context(const tokens &_tokens) :
-    xml_context_base(_tokens)
+opc_relations_context::opc_relations_context(session_context& session_cxt, const tokens &_tokens) :
+    xml_context_base(session_cxt, _tokens)
 {
     // build content type cache.
     for (schema_t* p = SCH_all; *p; ++p)
@@ -271,7 +255,7 @@ bool opc_relations_context::can_handle_element(xmlns_id_t ns, xml_token_t name) 
     return true;
 }
 
-xml_context_base* opc_relations_context::create_child_context(xmlns_id_t ns, xml_token_t name) const
+xml_context_base* opc_relations_context::create_child_context(xmlns_id_t ns, xml_token_t name)
 {
     return NULL;
 }
@@ -293,7 +277,7 @@ void opc_relations_context::start_element(xmlns_id_t ns, xml_token_t name, const
         break;
         case XML_Relationship:
         {
-            rel_attr_parser func(&m_schema_cache);
+            rel_attr_parser func(&get_session_context(), &m_schema_cache);
             xml_element_expected(parent, NS_opc_rel, XML_Relationships);
             func = for_each(attrs.begin(), attrs.end(), func);
             const opc_rel_t& rel = func.get_rel();
@@ -311,7 +295,7 @@ bool opc_relations_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void opc_relations_context::characters(const pstring &str)
+void opc_relations_context::characters(const pstring &str, bool transient)
 {
 }
 
@@ -328,3 +312,4 @@ void opc_relations_context::pop_rels(vector<opc_rel_t>& rels)
 }
 
 }
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

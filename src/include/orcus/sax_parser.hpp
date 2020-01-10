@@ -1,85 +1,38 @@
-/*************************************************************************
- *
- * Copyright (c) 2012 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
-#ifndef __ORCUS_SAX_PARSER_HPP__
-#define __ORCUS_SAX_PARSER_HPP__
+#ifndef ORCUS_SAX_PARSER_HPP
+#define ORCUS_SAX_PARSER_HPP
 
-#include <exception>
-#include <cassert>
-#include <sstream>
-
-#include "pstring.hpp"
-#include "cell_buffer.hpp"
-#include "sax_parser_global.hpp"
-
-#define ORCUS_DEBUG_SAX_PARSER 0
-
-#if ORCUS_DEBUG_SAX_PARSER
-#include <iostream>
-using std::cout;
-using std::endl;
-#endif
+#include "sax_parser_base.hpp"
 
 namespace orcus {
 
-class malformed_xml_error : public std::exception
+struct sax_parser_default_config
 {
-public:
-    malformed_xml_error(const std::string& msg) : m_msg(msg) {}
-    virtual ~malformed_xml_error() throw() {}
-    virtual const char* what() const throw()
-    {
-        return m_msg.c_str();
-    }
-private:
-    std::string m_msg;
-};
-
-/**
- * Element properties passed by sax_parser to its handler's open_element()
- * and close_element() calls.
- */
-struct sax_parser_element
-{
-    pstring ns;            // element namespace (optional)
-    pstring name;          // element name
-    const char* begin_pos; // position of the opening brace '<'.
-    const char* end_pos;   // position of the char after the closing brace '>'.
+    /**
+     * When true, the parser will throw an exception if the xml stream doesn't
+     * begin with a <?xml..?> declaration. When false, the parser will keep
+     * parsing regardless of whether or not the xml stream begins with a
+     * <?xml..?> declaration.
+     */
+    static const bool strict_xml_declaration = true;
 };
 
 /**
  * Template-based sax parser that doesn't use function pointer for
  * callbacks for better performance, especially on large XML streams.
  */
-template<typename _Handler>
-class sax_parser
+template<typename _Handler, typename _Config = sax_parser_default_config>
+class sax_parser : public sax::parser_base
 {
 public:
     typedef _Handler handler_type;
+    typedef _Config config_type;
 
     sax_parser(const char* content, const size_t size, handler_type& handler);
     ~sax_parser();
@@ -87,49 +40,6 @@ public:
     void parse();
 
 private:
-
-    std::string indent() const;
-
-    void next() { ++m_pos; ++m_char; }
-
-    void nest_up() { ++m_nest_level; }
-    void nest_down()
-    {
-        assert(m_nest_level > 0);
-        --m_nest_level;
-    }
-
-    inline bool has_char() const { return m_pos < m_size; }
-
-    inline size_t remains() const
-    {
-#if ORCUS_DEBUG_SAX_PARSER
-        if (m_pos >= m_size)
-            throw malformed_xml_error("xml stream ended prematurely.");
-#endif
-        return m_size - m_pos;
-    }
-
-    char cur_char() const
-    {
-#if ORCUS_DEBUG_SAX_PARSER
-        if (m_pos >= m_size)
-            throw malformed_xml_error("xml stream ended prematurely.");
-#endif
-        return *m_char;
-    }
-
-    char next_char()
-    {
-        next();
-#if ORCUS_DEBUG_SAX_PARSER
-        if (m_pos >= m_size)
-            throw malformed_xml_error("xml stream ended prematurely.");
-#endif
-        return *m_char;
-    }
-
-    void blank();
 
     /**
      * Parse XML header that occurs at the beginning of every XML stream i.e.
@@ -141,60 +51,31 @@ private:
     void element_open(const char* begin_pos);
     void element_close(const char* begin_pos);
     void special_tag();
-    void comment();
-    void content();
+    void declaration(const char* name_check);
+    void cdata();
+    void doctype();
     void characters();
-    void characters_with_encoded_char();
     void attribute();
 
-    void parse_encoded_char();
-
-    void name(pstring& str);
-
-    /**
-     * Parse attribute value.  Note that the retreived string may be stored in
-     * the temporary cell buffer. Use the string immediately after this call
-     * before the buffer becomes invalid.
-     */
-    void value(pstring& str);
-    void value_with_encoded_char(pstring& str);
-
-    static bool is_blank(char c);
-    static bool is_alpha(char c);
-    static bool is_name_char(char c);
-    static bool is_numeric(char c);
-
 private:
-    cell_buffer m_cell_buf;
-    const char* m_content;
-    const char* m_char;
-    const size_t m_size;
-    size_t m_pos;
-    size_t m_nest_level;
-    bool m_root_elem_open:1;
     handler_type& m_handler;
 };
 
-template<typename _Handler>
-sax_parser<_Handler>::sax_parser(
+template<typename _Handler, typename _Config>
+sax_parser<_Handler,_Config>::sax_parser(
     const char* content, const size_t size, handler_type& handler) :
-    m_content(content),
-    m_char(content),
-    m_size(size),
-    m_pos(0),
-    m_nest_level(0),
-    m_root_elem_open(true),
+    sax::parser_base(content, size),
     m_handler(handler)
 {
 }
 
-template<typename _Handler>
-sax_parser<_Handler>::~sax_parser()
+template<typename _Handler, typename _Config>
+sax_parser<_Handler,_Config>::~sax_parser()
 {
 }
 
-template<typename _Handler>
-void sax_parser<_Handler>::parse()
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::parse()
 {
     m_pos = 0;
     m_nest_level = 0;
@@ -202,49 +83,30 @@ void sax_parser<_Handler>::parse()
     header();
     blank();
     body();
+
+    assert(m_buffer_pos == 0);
 }
 
-template<typename _Handler>
-::std::string sax_parser<_Handler>::indent() const
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::header()
 {
-    ::std::ostringstream os;
-    for (size_t i = 0; i < m_nest_level; ++i)
-        os << "  ";
-    return os.str();
-}
-
-template<typename _Handler>
-void sax_parser<_Handler>::blank()
-{
-    char c = cur_char();
-    while (is_blank(c))
-        c = next_char();
-}
-
-template<typename _Handler>
-void sax_parser<_Handler>::header()
-{
-    char c = cur_char();
-    if (c != '<' || next_char() != '?' || next_char() != 'x' || next_char() != 'm' || next_char() != 'l')
-        throw malformed_xml_error("xml header must begin with '<?xml'.");
-
-    next();
+    // we don't handle multi byte encodings so we can just skip bom entry if exists.
+    skip_bom();
     blank();
-    while (cur_char() != '?')
+    if (!has_char() || cur_char() != '<')
+        throw sax::malformed_xml_error("xml file must begin with '<'.");
+
+    if (config_type::strict_xml_declaration)
     {
-        attribute();
-        blank();
+        if (next_char_checked() != '?')
+            throw sax::malformed_xml_error("xml file must begin with '<?'.");
+
+        declaration("xml");
     }
-    if (next_char() != '>')
-        throw malformed_xml_error("xml header must end with '?>'.");
-
-    next();
-
-    m_handler.declaration();
 }
 
-template<typename _Handler>
-void sax_parser<_Handler>::body()
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::body()
 {
     while (has_char())
     {
@@ -263,12 +125,12 @@ void sax_parser<_Handler>::body()
     }
 }
 
-template<typename _Handler>
-void sax_parser<_Handler>::element()
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::element()
 {
     assert(cur_char() == '<');
     const char* pos = m_char;
-    char c = next_char();
+    char c = next_char_checked();
     switch (c)
     {
         case '/':
@@ -277,27 +139,23 @@ void sax_parser<_Handler>::element()
         case '!':
             special_tag();
         break;
+        case '?':
+            declaration(NULL);
+        break;
         default:
+            if (!is_alpha(c))
+                throw sax::malformed_xml_error("expected an alphabet.");
             element_open(pos);
     }
 }
 
-template<typename _Handler>
-void sax_parser<_Handler>::element_open(const char* begin_pos)
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::element_open(const char* begin_pos)
 {
     assert(is_alpha(cur_char()));
 
-    sax_parser_element elem;
-    elem.begin_pos = begin_pos;
-
-    name(elem.name);
-    if (cur_char() == ':')
-    {
-        // this element name is namespaced.
-        elem.ns = elem.name;
-        next();
-        name(elem.name);
-    }
+    sax::parser_element elem;
+    element_name(elem, begin_pos);
 
     while (true)
     {
@@ -307,11 +165,15 @@ void sax_parser<_Handler>::element_open(const char* begin_pos)
         {
             // Self-closing element: <element/>
             if (next_char() != '>')
-                throw malformed_xml_error("expected '/>' to self-close the element.");
+                throw sax::malformed_xml_error("expected '/>' to self-close the element.");
             next();
             elem.end_pos = m_char;
             m_handler.start_element(elem);
+            reset_buffer_pos();
             m_handler.end_element(elem);
+#if ORCUS_DEBUG_SAX_PARSER
+            cout << "element_open: ns='" << elem.ns << "', name='" << elem.name << "' (self-closing)" << endl;
+#endif
             return;
         }
         else if (c == '>')
@@ -321,6 +183,10 @@ void sax_parser<_Handler>::element_open(const char* begin_pos)
             elem.end_pos = m_char;
             nest_up();
             m_handler.start_element(elem);
+            reset_buffer_pos();
+#if ORCUS_DEBUG_SAX_PARSER
+            cout << "element_open: ns='" << elem.ns << "', name='" << elem.name << "'" << endl;
+#endif
             return;
         }
         else
@@ -328,41 +194,36 @@ void sax_parser<_Handler>::element_open(const char* begin_pos)
     }
 }
 
-template<typename _Handler>
-void sax_parser<_Handler>::element_close(const char* begin_pos)
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::element_close(const char* begin_pos)
 {
     assert(cur_char() == '/');
     nest_down();
-    next();
-    sax_parser_element elem;
-    elem.begin_pos = begin_pos;
-
-    name(elem.name);
-    if (cur_char() == ':')
-    {
-        elem.ns = elem.name;
-        next();
-        name(elem.name);
-    }
+    next_check();
+    sax::parser_element elem;
+    element_name(elem, begin_pos);
 
     if (cur_char() != '>')
-        throw malformed_xml_error("expected '>' to close the element.");
+        throw sax::malformed_xml_error("expected '>' to close the element.");
     next();
     elem.end_pos = m_char;
 
     m_handler.end_element(elem);
+#if ORCUS_DEBUG_SAX_PARSER
+    cout << "element_close: ns='" << elem.ns << "', name='" << elem.name << "'" << endl;
+#endif
     if (!m_nest_level)
         m_root_elem_open = false;
 }
 
-template<typename _Handler>
-void sax_parser<_Handler>::special_tag()
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::special_tag()
 {
     assert(cur_char() == '!');
     // This can be either <![CDATA, <!--, or <!DOCTYPE.
     size_t len = remains();
     if (len < 2)
-        throw malformed_xml_error("special tag too short.");
+        throw sax::malformed_xml_error("special tag too short.");
 
     switch (next_char())
     {
@@ -370,54 +231,184 @@ void sax_parser<_Handler>::special_tag()
         {
             // Possibly comment.
             if (next_char() != '-')
-                throw malformed_xml_error("comment expected.");
+                throw sax::malformed_xml_error("comment expected.");
 
-            len = remains();
+            len -= 2;
             if (len < 3)
-                throw malformed_xml_error("malformed comment.");
+                throw sax::malformed_xml_error("malformed comment.");
 
             next();
             comment();
         }
         break;
+        case '[':
+        {
+            // Possibly a CDATA.
+            expects_next("CDATA[", 6);
+            if (has_char())
+                cdata();
+        }
+        break;
+        case 'D':
+        {
+            // check if this is a DOCTYPE.
+            expects_next("OCTYPE", 6);
+            blank();
+            if (has_char())
+                doctype();
+        }
+        break;
         default:
-            // TODO: Handle CDATA and DOCTYPE.
-            throw malformed_xml_error("failed to parse special tag.");
+            throw sax::malformed_xml_error("failed to parse special tag.");
     }
 }
 
-template<typename _Handler>
-void sax_parser<_Handler>::comment()
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::declaration(const char* name_check)
 {
-    // Parse until we reach '-->'.
-    size_t len = remains();
-    assert(len > 3);
-    char c = cur_char();
-    size_t i = 0;
-    bool hyphen = false;
-    for (; i < len; ++i, c = next_char())
+    assert(cur_char() == '?');
+    next_check();
+
+    // Get the declaration name first.
+    pstring decl_name;
+    name(decl_name);
+#if ORCUS_DEBUG_SAX_PARSER
+    cout << "sax_parser::declaration: start name='" << decl_name << "'" << endl;
+#endif
+
+    if (name_check && decl_name != name_check)
     {
-        if (c == '-')
-        {
-            if (!hyphen)
-                // first hyphen.
-                hyphen = true;
-            else
-                // second hyphen.
-                break;
-        }
-        else
-            hyphen = false;
+        std::ostringstream os;
+        os << "declaration name of '" << name_check << "' was expected, but '" << decl_name << "' was found instead.";
+        throw sax::malformed_xml_error(os.str());
     }
 
-    if (len - i < 2 || next_char() != '>')
-        throw malformed_xml_error("'--' should not occur in comment other than in the closing tag.");
+    m_handler.start_declaration(decl_name);
+    blank();
 
+    // Parse the attributes.
+    while (cur_char_checked() != '?')
+    {
+        attribute();
+        blank();
+    }
+    if (next_char_checked() != '>')
+        throw sax::malformed_xml_error("declaration must end with '?>'.");
+
+    m_handler.end_declaration(decl_name);
+    reset_buffer_pos();
+    next();
+#if ORCUS_DEBUG_SAX_PARSER
+    cout << "sax_parser::declaration: end name='" << decl_name << "'" << endl;
+#endif
+}
+
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::cdata()
+{
+    size_t len = remains();
+    assert(len > 3);
+
+    // Parse until we reach ']]>'.
+    const char* p0 = m_char;
+    size_t i = 0, match = 0;
+    for (char c = cur_char(); i < len; ++i, c = next_char())
+    {
+        if (c == ']')
+        {
+            // Be aware that we may encounter a series of more than two ']'
+            // characters, in which case we'll only count the last two.
+
+            if (match == 0)
+                // First ']'
+                ++match;
+            else if (match == 1)
+                // Second ']'
+                ++match;
+        }
+        else if (c == '>' && match == 2)
+        {
+            // Found ']]>'.
+            size_t cdata_len = i - 2;
+            m_handler.characters(pstring(p0, cdata_len), false);
+            next();
+            return;
+        }
+        else
+            match = 0;
+    }
+    throw sax::malformed_xml_error("malformed CDATA section.");
+}
+
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::doctype()
+{
+    // Parse the root element first.
+    sax::doctype_declaration param;
+    name(param.root_element);
+    blank();
+
+    // Either PUBLIC or SYSTEM.
+    size_t len = remains();
+    if (len < 6)
+        sax::malformed_xml_error("DOCTYPE section too short.");
+
+    param.keyword = sax::doctype_declaration::keyword_private;
+    char c = cur_char();
+    if (c == 'P')
+    {
+        if (next_char() != 'U' || next_char() != 'B' || next_char() != 'L' || next_char() != 'I' || next_char() != 'C')
+            throw sax::malformed_xml_error("malformed DOCTYPE section.");
+
+        param.keyword = sax::doctype_declaration::keyword_public;
+    }
+    else if (c == 'S')
+    {
+        if (next_char() != 'Y' || next_char() != 'S' || next_char() != 'T' || next_char() != 'E' || next_char() != 'M')
+            throw sax::malformed_xml_error("malformed DOCTYPE section.");
+    }
+
+    next_check();
+    blank();
+    has_char_throw("DOCTYPE section too short.");
+
+    // Parse FPI.
+    value(param.fpi, false);
+
+    has_char_throw("DOCTYPE section too short.");
+    blank();
+    has_char_throw("DOCTYPE section too short.");
+
+    if (cur_char() == '>')
+    {
+        // Optional URI not given. Exit.
+#if ORCUS_DEBUG_SAX_PARSER
+        cout << "sax_parser::doctype: root='" << param.root_element << "', fpi='" << param.fpi << "'" << endl;
+#endif
+        m_handler.doctype(param);
+        next();
+        return;
+    }
+
+    // Parse optional URI.
+    value(param.uri, false);
+
+    has_char_throw("DOCTYPE section too short.");
+    blank();
+    has_char_throw("DOCTYPE section too short.");
+
+    if (cur_char() != '>')
+        throw sax::malformed_xml_error("malformed DOCTYPE section - closing '>' expected but not found.");
+
+#if ORCUS_DEBUG_SAX_PARSER
+    cout << "sax_parser::doctype: root='" << param.root_element << "', fpi='" << param.fpi << "' uri='" << param.uri << "'" << endl;
+#endif
+    m_handler.doctype(param);
     next();
 }
 
-template<typename _Handler>
-void sax_parser<_Handler>::characters()
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::characters()
 {
     size_t first = m_pos;
     const char* p0 = m_char;
@@ -429,9 +420,14 @@ void sax_parser<_Handler>::characters()
         if (cur_char() == '&')
         {
             // Text span with one or more encoded characters. Parse using cell buffer.
-            m_cell_buf.reset();
-            m_cell_buf.append(p0, m_pos-first);
-            characters_with_encoded_char();
+            cell_buffer& buf = get_cell_buffer();
+            buf.reset();
+            buf.append(p0, m_pos-first);
+            characters_with_encoded_char(buf);
+            if (buf.empty())
+                m_handler.characters(pstring(), false);
+            else
+                m_handler.characters(pstring(buf.get(), buf.size()), true);
             return;
         }
     }
@@ -440,247 +436,45 @@ void sax_parser<_Handler>::characters()
     {
         size_t size = m_pos - first;
         pstring val(m_content + first, size);
-        m_handler.characters(val);
+        m_handler.characters(val, false);
     }
 }
 
-template<typename _Handler>
-void sax_parser<_Handler>::characters_with_encoded_char()
+template<typename _Handler, typename _Config>
+void sax_parser<_Handler,_Config>::attribute()
 {
-    assert(cur_char() == '&');
-    parse_encoded_char();
-    assert(cur_char() != ';');
-
-    size_t first = m_pos;
-
-    while (has_char())
-    {
-        if (cur_char() == '&')
-        {
-            if (m_pos > first)
-                m_cell_buf.append(m_content+first, m_pos-first);
-
-            parse_encoded_char();
-            first = m_pos;
-        }
-
-        if (cur_char() == '<')
-            break;
-
-        if (cur_char() != '&')
-            next();
-    }
-
-    if (m_pos > first)
-        m_cell_buf.append(m_content+first, m_pos-first);
-
-    if (m_cell_buf.empty())
-        m_handler.characters(pstring());
-    else
-        m_handler.characters(pstring(m_cell_buf.get(), m_cell_buf.size()));
-}
-
-template<typename _Handler>
-void sax_parser<_Handler>::attribute()
-{
+    sax::parser_attribute attr;
     pstring attr_ns_name, attr_name, attr_value;
-    name(attr_name);
-    if (cur_char() == ':')
-    {
-        // Attribute name is namespaced.
-        attr_ns_name = attr_name;
-        next();
-        name(attr_name);
-    }
+    attribute_name(attr.ns, attr.name);
 
 #if ORCUS_DEBUG_SAX_PARSER
-    cout << "attribute: ns='" << attr_ns_name << "', name='" << attr_name << "'" << endl;
+    std::ostringstream os;
+    os << "sax_parser::attribute: ns='" << attr.ns << "', name='" << attr.name << "'";
 #endif
 
     char c = cur_char();
     if (c != '=')
     {
         std::ostringstream os;
-        os << "Attribute must begin with 'name=..'. (ns='" << attr_ns_name << "', name='" << attr_name << "')";
-        throw malformed_xml_error(os.str());
+        os << "Attribute must begin with 'name=..'. (ns='" << attr.ns << "', name='" << attr.name << "')";
+        throw sax::malformed_xml_error(os.str());
     }
 
-    next();
-    value(attr_value);
-
-    m_handler.attribute(attr_ns_name, attr_name, attr_value);
-}
-
-template<typename _Handler>
-void sax_parser<_Handler>::parse_encoded_char()
-{
-    assert(cur_char() == '&');
-    next();
-    const char* p0 = m_char;
-    for (; has_char(); next())
-    {
-        if (cur_char() != ';')
-            continue;
-
-        size_t n = m_char - p0;
-        if (!n)
-            throw malformed_xml_error("empty encoded character.");
+    next_check();
+    attr.transient = value(attr.value, true);
+    if (attr.transient)
+        // Value is stored in a temporary buffer. Push a new buffer.
+        inc_buffer_pos();
 
 #if ORCUS_DEBUG_SAX_PARSER
-        cout << "sax_parser::parse_encoded_char: raw='" << std::string(p0, n) << "'" << endl;
+    os << " value='" << attr.value << "'" << endl;
+    cout << os.str();
 #endif
 
-        char c = decode_xml_encoded_char(p0, n);
-        if (c)
-            m_cell_buf.append(&c, 1);
-
-        // Move to the character past ';' before returning to the parent call.
-        next();
-
-        if (!c)
-        {
-#if ORCUS_DEBUG_SAX_PARSER
-            cout << "sax_parser::parse_encoded_char: not a known encoding name. Use the original." << endl;
-#endif
-            // Unexpected encoding name. Use the original text.
-            m_cell_buf.append(p0, m_char-p0);
-        }
-
-        return;
-    }
-
-    throw malformed_xml_error("error parsing encoded character: terminating character is not found.");
-}
-
-template<typename _Handler>
-void sax_parser<_Handler>::name(pstring& str)
-{
-    size_t first = m_pos;
-    char c = cur_char();
-    if (!is_alpha(c))
-    {
-        ::std::ostringstream os;
-        os << "name must begin with an alphabet, but got this instead '" << c << "'";
-        throw malformed_xml_error(os.str());
-    }
-
-    while (is_alpha(c) || is_numeric(c) || is_name_char(c))
-        c = next_char();
-
-    size_t size = m_pos - first;
-    str = pstring(m_content+first, size);
-}
-
-template<typename _Handler>
-void sax_parser<_Handler>::value(pstring& str)
-{
-    char c = cur_char();
-    if (c != '"')
-        throw malformed_xml_error("attribute value must be quoted");
-
-    c = next_char();
-    size_t first = m_pos;
-    const char* p0 = m_char;
-
-    for (; c != '"'; c = next_char())
-    {
-        if (c == '&')
-        {
-            // This value contains one or more encoded characters.
-            m_cell_buf.reset();
-            m_cell_buf.append(p0, m_pos-first);
-            value_with_encoded_char(str);
-            return;
-        }
-    }
-
-    str = pstring(p0, m_pos-first);
-
-    // Skip the closing quote.
-    next();
-}
-
-template<typename _Handler>
-void sax_parser<_Handler>::value_with_encoded_char(pstring& str)
-{
-    assert(cur_char() == '&');
-    parse_encoded_char();
-    assert(cur_char() != ';');
-
-    size_t first = m_pos;
-
-    while (has_char())
-    {
-        if (cur_char() == '&')
-        {
-            if (m_pos > first)
-                m_cell_buf.append(m_content+first, m_pos-first);
-
-            parse_encoded_char();
-            assert(cur_char() != ';');
-            first = m_pos;
-        }
-
-        if (cur_char() == '"')
-            break;
-
-        if (cur_char() != '&')
-            next();
-    }
-
-    if (m_pos > first)
-        m_cell_buf.append(m_content+first, m_pos-first);
-
-    if (!m_cell_buf.empty())
-        str = pstring(m_cell_buf.get(), m_cell_buf.size());
-
-    // Skip the closing quote.
-    assert(cur_char() == '"');
-    next();
-}
-
-template<typename _Handler>
-bool sax_parser<_Handler>::is_blank(char c)
-{
-    if (c == ' ')
-        return true;
-    if (c == 0x0A || c == 0x0D)
-        // LF or CR
-        return true;
-    return false;
-}
-
-template<typename _Handler>
-bool sax_parser<_Handler>::is_alpha(char c)
-{
-    if ('a' <= c && c <= 'z')
-        return true;
-    if ('A' <= c && c <= 'Z')
-        return true;
-    return false;
-}
-
-template<typename _Handler>
-bool sax_parser<_Handler>::is_name_char(char c)
-{
-    switch (c)
-    {
-        case '-':
-        case '_':
-            return true;
-    }
-
-    return false;
-}
-
-template<typename _Handler>
-bool sax_parser<_Handler>::is_numeric(char c)
-{
-    if ('0' <= c && c <= '9')
-        return true;
-    return false;
+    m_handler.attribute(attr);
 }
 
 }
 
 #endif
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -1,34 +1,14 @@
-/*************************************************************************
- *
- * Copyright (c) 2010, 2011 Kohei Yoshida
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- *
- ************************************************************************/
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
 #include "ods_content_xml_context.hpp"
-#include "odf_para_context.hpp"
 #include "odf_token_constants.hpp"
 #include "odf_namespace_types.hpp"
+#include "odf_styles_context.hpp"
 
 #include "orcus/global.hpp"
 #include "orcus/spreadsheet/import_interface.hpp"
@@ -84,26 +64,53 @@ private:
     pstring m_name;
 };
 
+class column_attr_parser : public unary_function<xml_token_attr_t, void>
+{
+    pstring m_style_name;
+public:
+    void operator() (const xml_token_attr_t& attr)
+    {
+        if (attr.ns == NS_odf_table)
+        {
+            if (attr.name == XML_style_name)
+                m_style_name = attr.value;
+        }
+    }
+
+    const pstring& get_style_name() const { return m_style_name; }
+};
+
 class row_attr_parser : public unary_function<xml_token_attr_t, void>
 {
+    int m_number_rows_repeated;
+    pstring m_style_name;
+
 public:
-    row_attr_parser(ods_content_xml_context::row_attr& attr) :
-        m_attr(attr) {}
-    row_attr_parser(const row_attr_parser& r) :
-        m_attr(r.m_attr) {}
+    row_attr_parser() : m_number_rows_repeated(1) {}
 
     void operator() (const xml_token_attr_t& attr)
     {
-        if (attr.ns == NS_odf_table && attr.name == XML_number_rows_repeated)
+        if (attr.ns == NS_odf_table)
         {
-            char* endptr;
-            long val = strtol(attr.value.str().c_str(), &endptr, 10);
-            if (endptr != attr.value.str())
-                m_attr.number_rows_repeated = val;
+            switch (attr.name)
+            {
+                case XML_number_rows_repeated:
+                {
+                    char* endptr;
+                    long val = strtol(attr.value.str().c_str(), &endptr, 10);
+                    if (endptr != attr.value.str())
+                        m_number_rows_repeated = val;
+                }
+                break;
+                case XML_style_name:
+                    m_style_name = attr.value;
+                break;
+            }
         }
     }
-private:
-    ods_content_xml_context::row_attr& m_attr;
+
+    int get_number_rows_repeated() const { return m_number_rows_repeated; }
+    const pstring& get_style_name() const { return m_style_name; }
 };
 
 class cell_attr_parser : public unary_function<xml_token_attr_t, void>
@@ -125,11 +132,15 @@ public:
         if (attr.ns == NS_odf_office)
             process_ns_office(attr);
     }
+
 private:
     void process_ns_table(const xml_token_attr_t &attr)
     {
         switch (attr.name)
         {
+            case XML_style_name:
+                m_attr.style_name = attr.value;
+            break;
             case XML_number_columns_repeated:
             {
                 const char* end = attr.value.get() + attr.value.size();
@@ -194,12 +205,14 @@ ods_content_xml_context::cell_attr::cell_attr() :
 
 // ============================================================================
 
-ods_content_xml_context::ods_content_xml_context(const tokens& tokens, spreadsheet::iface::import_factory* factory) :
-    xml_context_base(tokens),
+ods_content_xml_context::ods_content_xml_context(session_context& session_cxt, const tokens& tokens, spreadsheet::iface::import_factory* factory) :
+    xml_context_base(session_cxt, tokens),
     mp_factory(factory),
     m_row(0), m_col(0),
     m_para_index(0),
-    m_has_content(false)
+    m_has_content(false),
+    m_styles(),
+    m_child_para(session_cxt, tokens, factory->get_shared_strings(), m_styles)
 {
 }
 
@@ -212,13 +225,25 @@ bool ods_content_xml_context::can_handle_element(xmlns_id_t ns, xml_token_t name
     if (ns == NS_odf_text && name == XML_p)
         return false;
 
+    if (ns == NS_odf_office && name == XML_automatic_styles)
+        return false;
+
     return true;
 }
 
-xml_context_base* ods_content_xml_context::create_child_context(xmlns_id_t ns, xml_token_t name) const
+xml_context_base* ods_content_xml_context::create_child_context(xmlns_id_t ns, xml_token_t name)
 {
     if (ns == NS_odf_text && name == XML_p)
-        return new text_para_context(get_tokens(), mp_factory->get_shared_strings());
+    {
+        m_child_para.reset();
+        return &m_child_para;
+    }
+
+    if (ns == NS_odf_office && name == XML_automatic_styles)
+    {
+        mp_child.reset(new automatic_styles_context(get_session_context(), get_tokens(), m_styles, mp_factory));
+        return mp_child.get();
+    }
 
     return NULL;
 }
@@ -230,6 +255,46 @@ void ods_content_xml_context::end_child_context(xmlns_id_t ns, xml_token_t name,
         text_para_context* para_context = static_cast<text_para_context*>(child);
         m_has_content = !para_context->empty();
         m_para_index = para_context->get_string_index();
+    }
+    else if (ns == NS_odf_office && name == XML_automatic_styles)
+    {
+        cout << "styles picked up:" << endl;
+        odf_styles_map_type::const_iterator it = m_styles.begin(), it_end = m_styles.end();
+        for (; it != it_end; ++it)
+        {
+            cout << "  style: " << it->first << " [ ";
+            switch (it->second->family)
+            {
+                case style_family_table_column:
+                    cout << "column width: " << it->second->column_data->width.print();
+                break;
+                case style_family_table_row:
+                    cout << "row height: " << it->second->row_data->height.print();
+                break;
+                case style_family_table_cell:
+                {
+                    const odf_style::cell& cell = *it->second->cell_data;
+                    cout << "font ID: " << cell.font;
+                    spreadsheet::iface::import_styles* styles = mp_factory->get_styles();
+                    if (styles)
+                    {
+                        styles->set_xf_font(cell.font);
+                        size_t xf_id = styles->commit_cell_xf();
+                        m_cell_format_map.insert(name2id_type::value_type(it->first, xf_id));
+                    }
+                }
+                break;
+                case style_family_text:
+                {
+                    const odf_style::text& data = *it->second->text_data;
+                    cout << "font ID: " << data.font;
+                }
+                break;
+                default:
+                    ;
+            }
+            cout << " ]" << endl;
+        }
     }
 }
 
@@ -256,19 +321,24 @@ void ods_content_xml_context::start_element(xmlns_id_t ns, xml_token_t name, con
             case XML_calculation_settings:
             break;
             case XML_null_date:
-                start_null_date(attrs, parent);
+                xml_element_expected(parent, NS_odf_table, XML_calculation_settings);
+                start_null_date(attrs);
             break;
             case XML_table:
-                start_table(attrs, parent);
+                xml_element_expected(parent, NS_odf_office, XML_spreadsheet);
+                start_table(attrs);
             break;
             case XML_table_column:
-                start_column(attrs, parent);
+                xml_element_expected(parent, NS_odf_table, XML_table);
+                start_column(attrs);
             break;
             case XML_table_row:
-                start_row(attrs, parent);
+                xml_element_expected(parent, NS_odf_table, XML_table);
+                start_row(attrs);
             break;
             case XML_table_cell:
-                start_cell(attrs, parent);
+                xml_element_expected(parent, NS_odf_table, XML_table_row);
+                start_cell(attrs);
             break;
             default:
                 warn_unhandled();
@@ -319,18 +389,12 @@ bool ods_content_xml_context::end_element(xmlns_id_t ns, xml_token_t name)
     return pop_stack(ns, name);
 }
 
-void ods_content_xml_context::characters(const pstring& str)
+void ods_content_xml_context::characters(const pstring& str, bool transient)
 {
 }
 
-void ods_content_xml_context::start_null_date(const xml_attrs_t& attrs, const xml_token_pair_t& parent)
+void ods_content_xml_context::start_null_date(const xml_attrs_t& attrs)
 {
-    if (parent.first != NS_odf_table || parent.second != XML_calculation_settings)
-    {
-        warn_unexpected();
-        return;
-    }
-
     spreadsheet::iface::import_global_settings* gs = mp_factory->get_global_settings();
     if (!gs)
         // Global settings not available. No point going further.
@@ -342,14 +406,8 @@ void ods_content_xml_context::start_null_date(const xml_attrs_t& attrs, const xm
     gs->set_origin_date(val.year, val.month, val.day);
 }
 
-void ods_content_xml_context::start_table(const xml_attrs_t& attrs, const xml_token_pair_t& parent)
+void ods_content_xml_context::start_table(const xml_attrs_t& attrs)
 {
-    if (parent.first != NS_odf_office || parent.second != XML_spreadsheet)
-    {
-        warn_unexpected();
-        return;
-    }
-
     table_attr_parser parser = for_each(attrs.begin(), attrs.end(), table_attr_parser());
     const pstring& name = parser.get_name();
     m_tables.push_back(mp_factory->append_sheet(name.get(), name.size()));
@@ -363,45 +421,52 @@ void ods_content_xml_context::end_table()
     cout << "end table" << endl;
 }
 
-void ods_content_xml_context::start_column(const xml_attrs_t& attrs, const xml_token_pair_t& parent)
+void ods_content_xml_context::start_column(const xml_attrs_t& attrs)
 {
-    if (parent.first == NS_odf_table)
-    {
-        switch (parent.second)
-        {
-            case XML_table:
-                // TODO: Handle this.
-            break;
-            default:
-                warn_unexpected();
-        }
-    }
-    else
-        warn_unexpected();
+    spreadsheet::iface::import_sheet_properties* sheet_props =
+        m_tables.back()->get_sheet_properties();
+
+    if (!sheet_props)
+        return;
+
+    column_attr_parser func;
+    func = for_each(attrs.begin(), attrs.end(), func);
+
+    odf_styles_map_type::const_iterator it = m_styles.find(func.get_style_name());
+    if (it == m_styles.end())
+        // Style by this name not found.
+        return;
+
+    const odf_style& style = *it->second;
+    sheet_props->set_column_width(m_col, style.column_data->width.value, style.column_data->width.unit);
 }
 
 void ods_content_xml_context::end_column()
 {
+    ++m_col;
 }
 
-void ods_content_xml_context::start_row(const xml_attrs_t& attrs, const xml_token_pair_t& parent)
+void ods_content_xml_context::start_row(const xml_attrs_t& attrs)
 {
-    if (parent.first == NS_odf_table)
+    m_col = 0;
+    m_row_attr = row_attr();
+    row_attr_parser func;
+    func = for_each(attrs.begin(), attrs.end(), func);
+    m_row_attr.number_rows_repeated = func.get_number_rows_repeated();
+
+    // Pass row properties to the interface.
+    spreadsheet::iface::import_sheet_properties* sheet_props =
+        m_tables.back()->get_sheet_properties();
+
+    if (sheet_props)
     {
-        switch (parent.second)
+        odf_styles_map_type::const_iterator it = m_styles.find(func.get_style_name());
+        if (it != m_styles.end())
         {
-            case XML_table:
-                m_col = 0;
-                m_row_attr = row_attr();
-                for_each(attrs.begin(), attrs.end(), row_attr_parser(m_row_attr));
-            break;
-            default:
-                warn_unexpected();
+            const odf_style::row& row_data = *it->second->row_data;
+            sheet_props->set_row_height(m_row, row_data.height.value, row_data.height.unit);
         }
     }
-    else
-        warn_unexpected();
-
 }
 
 void ods_content_xml_context::end_row()
@@ -414,26 +479,18 @@ void ods_content_xml_context::end_row()
     m_row += m_row_attr.number_rows_repeated;
 }
 
-void ods_content_xml_context::start_cell(const xml_attrs_t& attrs, const xml_token_pair_t& parent)
+void ods_content_xml_context::start_cell(const xml_attrs_t& attrs)
 {
-    if (parent.first == NS_odf_table)
-    {
-        switch (parent.second)
-        {
-            case XML_table_row:
-                m_cell_attr = cell_attr();
-                for_each(attrs.begin(), attrs.end(), cell_attr_parser(m_cell_attr));
-            break;
-            default:
-                warn_unexpected();
-        }
-    }
-    else
-        warn_unexpected();
+    m_cell_attr = cell_attr();
+    for_each(attrs.begin(), attrs.end(), cell_attr_parser(m_cell_attr));
 }
 
 void ods_content_xml_context::end_cell()
 {
+    name2id_type::const_iterator it = m_cell_format_map.find(m_cell_attr.style_name);
+    if (it != m_cell_format_map.end())
+        m_tables.back()->set_format(m_row, m_col, it->second);
+
     push_cell_value();
 
     ++m_col;
@@ -470,3 +527,4 @@ void ods_content_xml_context::push_cell_value()
 }
 
 }
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */

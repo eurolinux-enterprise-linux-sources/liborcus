@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="13" uniqueCount="13">
+    <si>
+        <t>Dark Red</t>
+    </si>
+    <si>
+        <t>Red</t>
+    </si>
+    <si>
+        <t>Orange</t>
+    </si>
+    <si>
+        <t>Yellow</t>
+    </si>
+    <si>
+        <t>Light Green</t>
+    </si>
+    <si>
+        <t>Green</t>
+    </si>
+    <si>
+        <t>Light Blue</t>
+    </si>
+    <si>
+        <t>Blue</t>
+    </si>
+    <si>
+        <t>Dark Blue</t>
+    </si>
+    <si>
+        <t>Purple</t>
+    </si>
+    <si>
+        <t>Standard colors (all cells)</t>
+    </si>
+    <si>
+        <t>Standard colors (mixed)</t>
+    </si>
+    <si>
+        <r>
+            <rPr>
+                <sz val="11"/>
+                <color rgb="FFFF0000"/>
+                <rFont val="Calibri"/>
+                <family val="2"/>
+                <scheme val="minor"/>
+            </rPr>
+            <t>Red</t>
+        </r>
+        <r>
+            <rPr>
+                <sz val="11"/>
+                <color theme="1"/>
+                <rFont val="Calibri"/>
+                <family val="2"/>
+                <scheme val="minor"/>
+            </rPr>
+            <t xml:space="preserve"> and</t>
+        </r>
+        <r>
+            <rPr>
+                <sz val="11"/>
+                <color rgb="FF0070C0"/>
+                <rFont val="Calibri"/>
+                <family val="2"/>
+                <scheme val="minor"/>
+            </rPr>
+            <t>Blue</t>
+        </r>
+    </si>
+</sst>

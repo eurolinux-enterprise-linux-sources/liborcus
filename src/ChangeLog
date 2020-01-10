@@ -1,3 +1,1500 @@
+2013-12-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [40dd6d86cafb26cb964f9807177d2545087f7c61]
+
+	Update the Visual Studio solution files & get it to build with MSVC.
+
+
+2013-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [85310451bcf001a6485212faf83b6f6a082bec32]
+
+	Make sure the stream instance is alive during the test.
+
+	Else pstring may be accessing invalid memory location.
+
+2013-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e9481933deb09c2e085c2892f5564af26132be73]
+
+	Typo.  It needs to be _LIBS, not _LIB.
+
+
+2013-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0b07334884efec15b2b228f4919bceac646e1bce]
+
+	Add missing header.
+
+
+2013-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4883a40a70be6e77d5fee25c96b841cf423ddb65]
+
+	We need to include iostream header here.
+
+
+2013-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4c46a1b5304ddf63c297df0d714cdb5f1247cba3]
+
+	Updated extra file list.
+
+
+2013-12-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8f970b70fab21719457211f65392045617416f50]
+
+	We don't need this anymore. We use 'make dist' these days.
+
+
+2013-11-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8c7ebf5e36ceed6acb25f8effa237e104be7612c]
+
+	Some work toward importing number formats from xlsx. Still WIP.
+
+
+2013-11-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1262e5404c4296847341c27405e60ee28568a599]
+
+	Define auto filter interface, and use it to import auto filter data.
+
+
+2013-11-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1df6eed749f0f1a55234f88cc1b0b2ce801ede80]
+
+	We don't use this any more.
+
+
+2013-11-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [78810b225f65a2c2a605d17d6c04780a1cc70eae]
+
+	Use different interface for importing data tables.
+
+
+2013-11-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [59a76c4f1c074e74640097837ebb91ae3f36c0c8]
+
+	Started parsing the autoFilter data. Not finished yet.
+
+
+2013-11-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [603e901469f873e9e797056381081a3dba252e0a]
+
+	A little cleanup.
+
+
+2013-11-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [200d8e39d896fc4daa1a9786865f2a02654c9e41]
+
+	Remove old debug outputs.
+
+
+2013-11-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [768a8da0f6bef4bad01c4e34150438202d0e46cc]
+
+	New xlsx test file for importing autofilters.
+
+
+2013-11-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c1c1d5f910eacf9ce82b4f0a2f7328b857b6eefc]
+
+	Move set_data_table() interface to import_sheet.
+
+	It makes more sense to keep it together with the rest of the formula
+	import methods.
+
+2013-11-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [88d6c9995af0dcdb2a5c0e8d4dc47b0f5e73992b]
+
+	Fix the one-var data tables.
+
+	The column and row input cell references were flipped.
+
+2013-11-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cbdbc73a84779e4583d9344863257d50b3fbd350]
+
+	Add test xlsx file for importing single-variable data tables.
+
+	Both column and row-oriented tables.
+
+2013-10-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [289772ea1d80279dfbb769cdbe070d7c5a7d829c]
+
+	Parse and import data tables from xlsx.
+
+	Data table not yet stored in the spreadsheet model.
+
+2013-10-31  Kohei Yoshida  <kohei.yoshida@gmail.com>  [24bb41e1c39c919722cdbfc2d7229524021080a7]
+
+	Add xlsx test file for importing 2-variable data table.
+
+
+2013-10-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7a0614043a6f75137d676918eaf7ea9ccf7d4f89]
+
+	Add output format type 'none' which disables writing output files.
+
+	This is useful for benchmarking.
+
+2013-10-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [19172fc0ceb4736a4491479acdcb94c504e6fdcc]
+
+	Let's use 'middle' instead of 'center' for vertical alignment.
+
+	Stick with CSS's wording when in doubt.
+
+2013-10-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [52a480fe1ae345b58b7209a023a6bca083e0f403]
+
+	Import 'top', 'center', 'bottom' vertical alignment from xlsx.
+
+	And use it in html output.  We still need to handle other vertical
+	alignment types.
+
+2013-10-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [aafa2f526f8eb0c6ca7848e5cd3231683dbddc33]
+
+	Fix syntax error.
+
+
+2013-10-25  Kohei Yoshida  <kohei.yoshida@gmail.com>  [32d69dc569919090082b1d8f6b19a0922e8113fd]
+
+	Import horizontal text alignments from xlsx and use them in html output.
+
+
+2013-10-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [709a6cd5a48203e7d9e2485d25cee6f26e5d6da7]
+
+	Prevent potential memory leak.
+
+
+2013-10-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [27f15785ce9de7f12a162224b9f2f82cee9c9317]
+
+	Skip cells that are overlapped by merged cells in html output.
+
+
+2013-10-22  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9d76110aff86031985b52d4780d75b34c12cdb49]
+
+	Get 'make check' buildable again.
+
+
+2013-10-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a52a5efa7454f773e0e905c47f27f8be97608382]
+
+	Map merge cell info to html's colspan and rowspan.
+
+	TODO : skip cells that are overlapped.
+
+2013-10-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8eb7476297c7ba8920af62f1946551ba37d97f2e]
+
+	Import merged cell ranges from xlsx.
+
+
+2013-10-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [22825152472d7db223119190e17ce78fd85d3dbc]
+
+	Test file for importing standard colors from xlsx.
+
+
+2013-10-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2f280e04959817deb970be7ade7a4985d2b9b8ad]
+
+	Output background colors in html output.
+
+
+2013-10-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [666843bd4a37427dc0fb0f9ef8af9d8e4eae9d11]
+
+	The color attribute can occur under 'mruColors' element.
+
+
+2013-10-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e97c7be5761f86dc87a285d6e76350e89c8e6de8]
+
+	This actually breaks cells that don't have borders all around them.
+
+
+2013-10-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [80ef5bec76d83fb213b2cb68d742f8121e076307]
+
+	Handle shared formula cells correctly when dumping.
+
+
+2013-10-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2ad306bd18aed428479e6059b43eb47ec29d8240]
+
+	Move this to a separate method.
+
+
+2013-10-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e189d68d9b8e5ba553f4c89b1a54f7cd0718cc46]
+
+	Defer formula cell insertion after the parsing is done.
+
+	So that formula cells get inserted after the shared string table is
+	imported. Tokenization of formulas may add new shared string instances
+	to the table, which may mess up the string ID's if that happens before
+	the string table is imported.
+
+2013-10-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9b56e5c73d72dde1000557e7f8a2b8853c8879e0]
+
+	Reallly append strings when importing shared string table from xlsx.
+
+	Sometimes we encounter strings that are identical character-wise but
+	different in terms of format runs.
+
+2013-10-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [886b3b3608e4f38e17257789f6ffe4d77c2ee417]
+
+	Allow session_context to store custom data.
+
+	And have the xlsx import session make use of it. Right now its session
+	data is empty, but I'll start filling it.
+
+2013-10-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ad17d1583b90be0580b68dee02f5f56852d9371f]
+
+	Import font colors and use it in html output.
+
+
+2013-10-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [50d7bdb2f5785f952677ebf6039ba455cb808ca8]
+
+	Rename spreadsheet data structures to append _t.
+
+	To be consistent with other data structures in orcus.
+
+2013-10-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0f647fe6be0769d693ddbe080a79de31a1ab2ff7]
+
+	New test file to import colored texts from xlsx.
+
+
+2013-10-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [128baf9d7ef185803db14939296f05adc422f078]
+
+	Handle transient string values correctly.
+
+
+2013-10-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fe1db279986d3f1cb17900ee78d19c5c180aaf42]
+
+	Switch back to 'collapse', and remove default gray borders.
+
+
+2013-10-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fe90f9fceda8a56ac595e7aa2ac909d31a2603eb]
+
+	Remove debug statement.
+
+
+2013-10-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1410f0d431792e65edfbe21a8b46641d6f6646c6]
+
+	More complete border mapping from xlsx to html.
+
+
+2013-10-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b39a34d58cf325467c8c09b7e7aac383c9aa6dfb]
+
+	Import border colors and honor them in html output.
+
+
+2013-10-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [20963a91012dcad8156c766f41da24e98aa2d9b8]
+
+	Display some border types in html output.
+
+	think, medium and thick border types only for now.
+
+2013-10-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e4ddea30cd73620e2ab5e38c89b6d6bd423989d4]
+
+	Avoid strto* system calls.
+
+	Because they are slow on Windows.
+
+2013-10-07  Kohei Yoshida  <kohei.yoshida@gmail.com>  [29e0658da6cbef8c89efff8b48d1b3d3833a91d1]
+
+	More test files for border imports.
+
+
+2013-10-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d72200cb18916f56ab77fba982bf8199eee49c58]
+
+	Set custom row height to html output as well.
+
+
+2013-10-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d92f23d51e8b201147e8b68c42f95b7b11d9b059]
+
+	Some cleanup.
+
+
+2013-10-06  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2245542560ddf3445c52813b61321d9a27c99e2a]
+
+	Use CSS to define styles rather than hard-coded styles for each cell.
+
+
+2013-10-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [205e2f66bfbe772dfb61d09018b5d9cf07988555]
+
+	Apply column widths when dumping in html format.
+
+
+2013-10-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c0c6baae528343a44a87d59ec8c4e19e0eb65b4b]
+
+	New test file for importing borders from xlsx.
+
+
+2013-10-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bc6f31223a5ef0d2597f791fcb5331a7e789217d]
+
+	Change the license from MIT to MPL 2.0.
+
+
+2013-09-24  Kohei Yoshida  <kohei.yoshida@gmail.com>  [69d83847ef596434f65763f8e38a7d957e49cf19]
+
+	Forgot to add this new header.
+
+
+2013-09-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3e013204792d50c9fc103d69ae602688759628ef]
+
+	Do the same for csv, xls-xml and gnumeric command line tools as well.
+
+
+2013-09-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a76bf86d57585b93963d6f309fbc41858dc10f36]
+
+	Use the arg parser for orcus-xlsx.
+
+
+2013-09-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ac81b7bd9758110abb85392f056f63f0351a227a]
+
+	Make the arg parser more generic, by removing the ODS-ness.
+
+
+2013-09-23  Kohei Yoshida  <kohei.yoshida@gmail.com>  [de0f7dead0483d0e006960b462d0b86384e7b8f8]
+
+	Move command line arg parsing to its own function.
+
+
+2013-09-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3be2f8288300c29a1824650c15ed32a71703c04f]
+
+	Redirect flat dump output to files, one per sheet.
+
+
+2013-09-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ee2b9a629ac0a6a7f4535563ba78c1bfca933ea8]
+
+	Check the output directory presence.
+
+
+2013-09-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [44eab74ec432c9dc6f83d9be644c930d86ab41f9]
+
+	boost::program_options required only --with-tools.
+
+
+2013-09-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6a3475ac65b66cf8e17b33eaf63eb95a0af00ae9]
+
+	We don't need this file.
+
+
+2013-09-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3ed0ce110a57bb51b159f36a77e5a79abb1542c0]
+
+	Check the input values, and honer output directory path.
+
+
+2013-09-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cfb1595eb0ceb430e12390b7e89804dcde5930c2]
+
+	Use boost::program_options to handle inputs for orcus-ods.
+
+	Options are not being handled yet.
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7f413eeabead88869e5967d83c95065e055d9f41]
+
+	Class description.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d891873eb1fce192865dae7d151e65b298462539]
+
+	Add test for gnumeric file format detection.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6db06cff35a9f27918e3021687b8b2761759ce23]
+
+	Detect gnumeric file type.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [509ed74ca1fccffd7b4715bdf0892e9f8c1fae8e]
+
+	Set up detection handler skeleton for orcus-gnumeric.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1a6b368673767b4a3cc36604f5d772d01e595fed]
+
+	We don't need this.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [23f41f806e38adca24e0c55d1215784b33bbb852]
+
+	Remove unused header includes.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b3c0e6a295ebd5cb5ed858f634906012a479c16c]
+
+	Use common function to decompress gzipped stream for gnumeric files.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3606f0bb396628a2b492ca042458e37999e0201e]
+
+	Use boost::iostreams to decompress gzipped stream in memory.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c5e3b74bc36e7f60c99824a9ac1ecc273997091b]
+
+	Use boost.m4 to simplify boost library detection during configure.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9e4db7758abef3bb49a76441af3f0aff403744ff]
+
+	Note on using boost iostreams to do in-memory gzip decompression.
+
+
+2013-09-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [915e1ff5f1156a03e57189c99c81dc05e57d84a7]
+
+	Notes on how to implement in-memory gzip handling.
+
+
+2013-09-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [01181e16807858baa21a511d68d81ad6536b768d]
+
+	Detect Excel XML format for real.
+
+
+2013-09-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b554e16c154b6bf9e64ecc883e134cf5c2301b6f]
+
+	Prevent infinite loop in case the magic number is not found.
+
+
+2013-09-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8d72817ab9c6a6fbe4f6fa276efb104d6478c669]
+
+	Add skeleton code for xls xml detection.
+
+	It still doesn't detect anything yet.
+
+2013-08-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [4955af1fd41583200befc433c625b502ef397dc2]
+
+	Add detect method to orcus_gnumeric, and use scope object for gzfile.
+
+	The detection code will come later. Decompressing a gzip in memory
+	needs a bit more work.
+
+2013-08-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a45d443dab9028ffea3d6379e1a5c573e270ec3d]
+
+	Mistake in the comment.
+
+
+2013-08-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9892202225dd7a15b5eb0d36a454ddc7eb2db85e]
+
+	Detect xlsx file type.
+
+
+2013-08-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b991c2e4a72135e5731318741e04aae3246597a7]
+
+	Detect ods type for real.
+
+
+2013-08-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1223ba4947f59661e35b596752ea12a7c96241bd]
+
+	Implement zip_archive_stream_blob.
+
+
+2013-08-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b75e5f9dd9d5e0b473c16eeb922c1f238ddc81de]
+
+	Set up skeleton for orcus-detect.
+
+
+2013-08-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8ac64c5d38a48e245e7b14baead3fe1731d38a75]
+
+	Set up testing for detecting ods format.
+
+	Right now, it doesn't really detect anything.
+
+2013-08-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f5a065ca3cd7df3fbe85ac08ee718e1f1e638ebd]
+
+	Add xlsx, xls-xml and gnumeric there as well.
+
+
+2013-08-03  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e723a36a778c6e090dc020c11f0d430bed067ed9]
+
+	Start working on format detection code.
+
+	It's just a skeleton for now.
+
+2013-08-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c50c13255e1c0f1dfbe6be92a053238fdee146a8]
+
+	Don't forget to specify mdds flag & fix the build.
+
+
+2013-07-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3efe6aef22cdbb5501b21a2470d5be75e24c60cf]
+
+	Add test for cell formats for ods import.
+
+	Also, rename struct xf to cell_format. It is more intuitive that way.
+
+2013-07-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2afe66133d0427e50fdca035d21ad86d9ad4e584]
+
+	Add test for text format import. Not done yet.
+
+
+2013-07-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0de6d50f8f3cf30b34c16cbfde8801054b21f77d]
+
+	Fix HTML dumping code.
+
+
+2013-07-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6837b6219a55a1e49cfac65964aab76e4914684b]
+
+	Set font for each formatted segment.
+
+
+2013-07-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8bfbc92a711c3ae2d3545cbc2cd2c83f7753d4d4]
+
+	Update copyright years.
+
+
+2013-07-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f649b43c39176dceed328ac123e2be384a71f355]
+
+	Append each segment separately rather all all at once at the end.
+
+
+2013-07-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a0a25089c1ac00f40c5338f69c904600dec72959]
+
+	Handle <text:span> stack inside <text:p> scope.
+
+
+2013-07-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c5fe9fe300e6f8c2cc4a56aa46cd8d4963f7b485]
+
+	Move single_attr_getter to a global location.
+
+
+2013-07-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8fd1c4c558f702fd75644f5ad971c15f7d633341]
+
+	More on handling transient attribute values.
+
+
+2013-07-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [30e1a28c3fb00a9b3862adde144d25d89e23ae56]
+
+	Pass the transient state of an attribute value to the callback.
+
+
+2013-07-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6904388f8ec93a512f33b4d3dc9356d596c0e1a7]
+
+	Intern values of transient text contents.
+
+
+2013-07-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [71bb2007101a6c85d41a0ff001af51262c867da4]
+
+	Print font ID for text style properties (for debugging).
+
+
+2013-07-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [90c3fb3db6ad4ec3634b809ba154aa41a6fcd231]
+
+	Make this a separate method.
+
+
+2013-07-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3c3b7ce815e3b7b0a650c8b9ceb2b96c6c2dd1a3]
+
+	font-size is under fo namespace not style namespace.
+
+
+2013-07-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [aebf3b67d4fc315ad4830330c8856b0ec5662d72]
+
+	New test document for importing font styles.
+
+
+2013-07-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e47a5080dfedd2904207eb4c848df79b841df685]
+
+	Set default styles first before importing real styles.
+
+
+2013-07-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [77bccd3c1d2558f5f922aac27c8b799273bc6b77]
+
+	Try to pick up font styles for cells during ods import.
+
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [99326d20fa69696c76a52d5cc46afc35c9c89d99]
+
+	Fix a bug in cell format import.
+
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c757be84b499e58e77f8c5a60ef00478b8778db4]
+
+	This doesn't have to be a template.
+
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5e2893a4ea0ba4ad04ff36448955b01358cfc499]
+
+	Let's not include headers that the project doesn't use.
+
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [dcdfde13d18af39bfe4f957193a18dbda9864703]
+
+	Switch from mdds::mixed_type_matrix to mdds::multi_type_matrix.
+
+	The former type is deprecated.
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e03a645476b5a8f4b6ae92e85bf162ffae255d8f]
+
+	Another test for parsing text delimiter inside quotes.
+
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3b72f291159f389dff8049a70604ac2321bbd109]
+
+	I didn't really need this.
+
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [97e487f11d5903ecb1075f492c6c7802d428970b]
+
+	Add test for parsing literal double-quotes in csv.
+
+	And fix one bug associated with it.
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1cfa6d22b68ee6218ebccef9e281d33e933dbb27]
+
+	Convert normal-quotes test.
+
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ea6145d6a9d8a102c3d82f6c893acd974a2551af]
+
+	Escape double quote characters when dumping check content.
+
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3bb2a3ead763c3f1ee180cd226dc775543b8d09e]
+
+	Make the csv tests consistent with tests for the other format types.
+
+
+2013-07-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [523a7586e7f7e601e66e7cd9aedd3532934e67d4]
+
+	Add test for xls-xml on basic content import.
+
+
+2013-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [405ef42742d1c5c17da511d44cd8be380c439e12]
+
+	Pass to the handler whether or not a content string is transient.
+
+	It's the same logic as with attribute values.
+
+2013-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0452816377fd3ae62cf0f780a9dac2dbd6a59d1c]
+
+	Pass to the caller whether or not attribute value is transient.
+
+	When the attribute value is transient, its value is stored in a temporary
+	buffer and is not expected to survive beyond the scope of the callback.
+
+2013-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9b7a697020c76f655fa27c191a3651fadb1de787]
+
+	Import cell data from Excel XML.
+
+
+2013-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [768a3c628f67d522053e5bbfe3df31dabaab9d2c]
+
+	Add test for parsing multiple attributes with encoded characters.
+
+
+2013-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ea7d058d8e21c80b60bd9c29b007fd05e44447c3]
+
+	Allow sax parser to have more than one cell buffer.
+
+	This is to ensure that when multiple attributes of the same element
+	have encoded values the newer value won't overwrite the older one in
+	the temporary buffer.
+
+	This is needed for sax_token_parser as it stores all attributes in
+	std::vector before sending them to the handler.
+
+2013-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [712bed871814abdecff8942f052dd13789d2efb1]
+
+	Pick up sheet names.
+
+
+2013-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e66f5b2253d7c3b8b4915a83962962e29e72da65]
+
+	Parse it down to cell data.
+
+
+2013-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7211ca4baa14346898fd265798f0ad4308bbb790]
+
+	Add predefined namespaces for xls xml.
+
+
+2013-06-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b3285b80e90f622ea6f66da362272256b5120f76]
+
+	Set up context stacks for xls xml.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [189852c9835103657e62777695c736b12fe6ec8a]
+
+	Add csv::parser_base to move non-templatized code for size reduction.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e4dd386196bbd20a717987d9204ae5bb21cef1fe]
+
+	Add csv base to move code that doesn't have to be inline.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [655d838d08d27306bb58ca9bc86361d2af5160c5]
+
+	Move these generic functions to parser global.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c0c1259d65fddd63f6325888f70d37a36aec9236]
+
+	Rename sax_parser_global to sax_parser_base.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f0f43cbb4fa12779f06ff1bb1bc8a45267fd7b18]
+
+	Move this to base.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8c361e0059957a42716d671fab1cfabd5d78afbe]
+
+	Move this to base too.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d614bbcafe0f4b7b954d4192fda6c200930cab22]
+
+	Simply this a bit.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [522744de1e53942543c60290b65a46d3b658bc4b]
+
+	We can move this to global too.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [76fca2d4893918faf75d2002bbc726442a6a95f6]
+
+	Move sax_parser_element to global.
+
+
+2013-06-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fad3ecf5666390312b011bb1e7089f3b36d41d99]
+
+	Move parts of sax_parser out of its template part.
+
+	To keep the size of template instances smaller.
+
+2013-06-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [27c83579e2b96e6c4a3c3c86147facf4c3fffcaa]
+
+	Move this to sax_parser_global.
+
+
+2013-06-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3bb6f01846f7513834fc38539891dd3c63276104]
+
+	Add a test case to catch this.
+
+
+2013-06-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6f06d7b09e5be271159b788fecc1325f26f07d10]
+
+	Remove these incorrect assertions.
+
+	For instance, ';' is a valid content that can trigger these assertions.
+
+2013-06-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [59614b60552b3d9334e5f37109467d9f5309ba32]
+
+	A bit more on xls-xml, but not much.
+
+
+2013-06-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0f7bde6b047f3d843a9ade8806cf62d9f3a49f39]
+
+	Bootstrap for orcus-xls-xml.
+
+
+2013-06-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5569c0512222beddda831dadf24be76fa4b698c3]
+
+	Generate token files for Excel XML format.
+
+
+2013-06-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [105cbf9072e955e28ac466a186042a94e463f256]
+
+	Add namespace parsing mode.
+
+	It's still rough around the edges, but it's good enough for now.
+
+2013-06-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d1dd367fdc2f590e5277decc5ff4fc005d3135a6]
+
+	Re-organize the python token generator scripts.
+
+
+2013-06-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1139259951736c525b7141ea6ad93235220f3139]
+
+	General-purpose XML Schema key dumper.
+
+
+2013-06-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f23ccdea36406e54aec2c715c175c19082328eed]
+
+	Move these token generator python scripts from bin to misc.
+
+	They are rarely used anyway. They don't deserve to be in the bin
+	directory.
+
+2013-06-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9a0c1a5e1f8183d547a070db4fbb52e0c1a29689]
+
+	Change content of this XML file.
+
+
+2013-06-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [45d7d23335d57ceb8a9df215c3c22ffc516f8d8d]
+
+	Rename xls2003 to xls-xml. This format is not specific to Excel 2003.
+
+
+2013-06-15  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0392d6db4a60807112f3e767353b7d4952b03ec2]
+
+	Remove obsolete forward declarations.
+
+
+2013-06-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [11b98ee394192cd92bd28dfb7ad17305a42d6b4d]
+
+	Add a method to simplify check for a sequence of characters.
+
+
+2013-06-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [277ab911eeaa2bd92bb5a1241dcbd4f9fe00d04e]
+
+	Prevent possible buffer overflow.
+
+
+2013-06-11  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8d40f2d7a384cc68530dfdf26f3391be8236c0bb]
+
+	Make sax_parser more secure against buffer overflow.
+
+
+2013-06-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d6c385c9307b42dbfa867b3e4475d412c829cbdc]
+
+	Make it easier to add new dtd tests.
+
+
+2013-06-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [66fc6181f460b0154ba324b1b123e032ee2f1457]
+
+	Add test for parsing <!DOCTYPE... >.
+
+
+2013-06-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fcf1fb5af875eba637ea219b8e7b22069dace79a]
+
+	We don't need this.
+
+
+2013-06-10  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9a1edd96b8009fa85326f11e611caf566404df7c]
+
+	Parse <!DOCTYPE ... > in sax_parser.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [60706724653013dc882e75188f1230fb8d856ede]
+
+	Test case for parsing CDATA.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f3388144fcb939de394d7a25e9ffb7ee4a46bd80]
+
+	On 2nd thought, let's not keep the characters and cdata separate.
+
+	They should both be handled as character data, with the same callback
+	method. Simpler the better.
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ec4d03cad4f96b9181366bbbd877391b8443861d]
+
+	Add parse only test for sax_parser. No content check for this file.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a77ff705890f7b93374f31efd727348024c0e434]
+
+	Treat cdata and characters identically for tests, skip tabs as blanks.
+
+	Maybe it's okay to route cdata as characters in all cases. But they are
+	separate calls for now.
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [714645bcaa12155868ea33c55e917ca8e80d60f6]
+
+	Add support for CDATA in sax_parser.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3e2701ece5d4cc4ac6d58688b7585061ece1c456]
+
+	Tab character is also a blank character.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c39d49c65ccbcee4a860ffd3a65f0e1acdac9bf1]
+
+	Add a bit more debug outputs for sax_parser.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [895cfed521e4d604c905477dd0faba33122e95e2]
+
+	Test RSS file taken from my own website: http://kohei.us/feed/.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c5b017fce8624806e766fe98c19fc8c0c58fe6a5]
+
+	I forgot to remove this.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8f46f9231da41a7cd4a6d677c96131e3e0753f27]
+
+	Share the xml parsing part.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bb6fbda483d2981dd353f0561b82245c17aac81a]
+
+	Add unit test for parsing the xml declarations.
+
+
+2013-06-09  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d3c04c3333d4fd58e0c4ad8ba66f6e408c8a245e]
+
+	Have dom_tree store multiple declaration attributes with names as keys.
+
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6ba3916ca4366f5943de9e63794bcad3f13dfe62]
+
+	Add test for parsing custom declarations.
+
+	The test file is a simple Excel 2003 XML document.
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f2d3c7c91f4742caf0930c09806336691df87a2e]
+
+	Make sax_parser configurable.
+
+	The first item toggles whether the parser requires every xml stream
+	begins with <?xml...?> or not.
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [69f7412f6bce5e017175a7a8bf4efa69b923d99b]
+
+	No more declaration() handler callback.
+
+	The <?xml ?> declaration is also handled by the start_ and
+	end_declaration() callback pair.
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a91346a442b8ddacb790a356e4b3a3cfa0ecdc68]
+
+	Declaration may have multiple attributes.
+
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [09b90f1952f7d01bece00eec26b3db0f0fc15828]
+
+	Add mechanism to parse arbitrary xml declarations.
+
+	With this, we can correctly parse <?mso-application ...?> tags.
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1fbaf3fa79aaeafd3e8cff10e0e45f72bf1f1db8]
+
+	This method is unused.
+
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ea4dff2dd746ce0011d2083a5c9065741a6545cf]
+
+	Put these global sax functions inside sax namespace.
+
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [54af9b740719630d2ab2a50b58df5d3441b04246]
+
+	These functions don't have to be part of the template.
+
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [73aeac52b8402f1f5e08e78b782f753a39b63dc8]
+
+	First Excel 2003 XML file to play with.
+
+	Currently, parsing this file throws an exception, but we need to at
+	least be able to parse this format without throwing exceptions.
+
+2013-06-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7da44ea1e56ca89fe1709ae3827a67dc504e9b7b]
+
+	Let's not silently exit when exception is thrown. That's not very helpful.
+
+
+2013-06-08  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [ba43e43600660681c072941d9af350f7fe3c636b]
+
+	use an exception to signal invalid xml files, fdo#63844
+
+
+2013-06-08  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [49da4b0c745b22318589048a59c5a3133b35fc9a]
+
+	column width is an optional attribute
+
+
+2013-06-08  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [f1e523e7ab33fcc265905d8b934e1f32dfdc5fd3]
+
+	add test for xlsx hidden row/column import
+
+
+2013-06-08  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [7b2857db802bb11c4f23b23d480bee2773c0962a]
+
+	add hidden col/row import from XLSX
+
+
+2013-06-08  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [774eca5e029944d929f0df2f581f0c85af2bacc7]
+
+	add support for hidden col/row import from gnumeric
+
+
+2013-06-08  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [83dd743f136b979694a05723be9097d5e9fd9903]
+
+	add mock implementation for import_sheet_properties
+
+
+2013-06-08  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [e2907363d91149cb71bc4f58ea0c55d4b16c2d61]
+
+	add test case for gnumeric col width/row height import
+
+
+2013-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1661335a85bead5ff79a54d281bc35956a015c89]
+
+	Export these structs.
+
+
+2013-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ac6a9ac26aa09f01b769cb65c490e2c85773efee]
+
+	Move these structs out of import_styles scope.
+
+
+2013-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d4038cd9b530a52433452fdf13ef6b9544d63e11]
+
+	Export this struct.
+
+
+2013-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3771ee2c93da4d3098361b118d0aab5254b44cf1]
+
+	Make cell format storage column major.
+
+
+2013-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2f953961f24e1654ffbde575e50e18817b5d7c8c]
+
+	Make format_run struct a top level item.
+
+
+2013-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2a62185bac0de30dca3e993e5b0f8df25db8749a]
+
+	New xlsx document for importing formatted text content.
+
+	Bold and italic text only for now.
+
+2013-06-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ee22a06d46afe3433252359299a3c19395fcac63]
+
+	Add unit test for column width and row height import from ods.
+
+
+2013-05-30  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [c81da4317b297ccc4acb27d30d77f1b17b167d19]
+
+	r is an optional attribute in row and c
+
+
+2013-05-30  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [0ea76ebc78080dfb4f462f9ee2cdec3b9fbe82a4]
+
+	import col and row height/width from gnumeric
+
+
+2013-05-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [960156ec673a7a2e91ca103dd3cad6fa88fe63e3]
+
+	Add test case for XML byte order mark (BOM).
+
+
+2013-05-29  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [71d4efba781af4ddb8c5e4e2589ebdac22ff87df]
+
+	skip byte order mark for xml streams
+
+	We only handle UTF-8 streams right now so we can bail out already when
+	we read a wrong byte order mark.
+
+2013-05-29  Fridrich Štrba  <fridrich.strba@bluewin.ch>  [2ba8c2407be26a7a6c6f0b681567311d5bf15c74]
+
+	Some cleanup of pkg-config file
+
+
+2013-05-23  Fridrich Štrba  <fridrich.strba@bluewin.ch>  [833caa16d7c5662217f9789f901952f20bf1dca8]
+
+	Fix distcheck errors and allow tests run from build directory
+
+
+2013-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0930ef22a9f17db09d3f2cbb6a0b6f5b0cdd770f]
+
+	Add swap() to document.
+
+
+2013-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e02676394e2cca319ac3c9df4425a6f0e9943a4e]
+
+	Add sheet_size() to document to return the number of sheets.
+
+
+2013-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [51c3616cb2cef20674c6f4a96d76a1fba15f0929]
+
+	Sheet now returns its actual row and column sizes via these methods.
+
+
+2013-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [debe48461edbde7f8484e45381792dc12a5d536b]
+
+	Have the factory implementation store the default column and row sizes.
+
+
+2013-05-19  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c3058828ff212618e43275586f74f1ea54826cd9]
+
+	Let the caller specify the default row and column sizes for sheets.
+
+
+2013-05-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [bf0b31d923ed50c15831b26146d73e3f5987102e]
+
+	Import row heights from xlsx documents.
+
+
+2013-05-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fad8ea5c291bfd9f8ca549947ece034098b7864c]
+
+	Import Excel's column widths.
+
+	But the conversion may not be correct. Find a better way to convert
+	them.
+
+2013-05-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5da5b5558c6a786dd4f3d60f8466c12bd16a0c95]
+
+	Parse column widths in xlsx.
+
+
+2013-05-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [17cd3795042d4de1dc6ebe8c65fceda11aa804da]
+
+	Calculate formula cells during finalize() phase.
+
+
+2013-05-13  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3a5b274e5c25a6f9af68e9f729a801a35403e156]
+
+	Remove these debug statements.
+
+
+2013-05-09  David Tardon  <dtardon@redhat.com>  [db809c970400142d477f969ced247ce77d91435e]
+
+	catch exception in main
+
+
+2013-05-09  David Tardon  <dtardon@redhat.com>  [05066b918d31c3e8b4811fe1c42a6c75615225cf]
+
+	drop unused variable
+
+
+2013-05-09  David Tardon  <dtardon@redhat.com>  [c71a7358d8d5760ca560c0d45d700f1f42dc4561]
+
+	coverity: do not return contents of a local object
+
+
+2013-05-09  David Tardon  <dtardon@redhat.com>  [786a6a5ff22b9f94bb755936a4be9c8a12276b19]
+
+	coverity: uninitialized members
+
+
+2013-05-09  David Tardon  <dtardon@redhat.com>  [c644d8793bc5309a798667d4fc07e657c6e2c2ca]
+
+	coverity: missing break
+
+
+2013-05-09  David Tardon  <dtardon@redhat.com>  [dd8c40155672905f651ce83fb050e7aa58ff080b]
+
+	coverity: add missing throw
+
+
+2013-05-08  Kohei Yoshida  <kohei.yoshida@gmail.com>  [12a347acf8f340d49c28b91a8c68be0f604730ae]
+
+	Support convertion from cm to twips.
+
+
+2013-05-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [1dcc9c1e47c4bcd13a067ab8c01cc028a79c15b3]
+
+	Allow fetching sheet object by index.
+
+
+2013-05-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6750976a35b10ff88d0616cbeacb873afaf4c12a]
+
+	Two new constants for default column width and row height.
+
+
+2013-05-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9aa213e81b45990f493bdd0c51377735ed9334d7]
+
+	Adopt to API change in mdds 0.8.0.
+
+
+2013-05-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [df6432ba9a27cd7ac7de6a225a2747a21eb5041b]
+
+	Require mdds 0.8.0 (yet to be released, the lateast on the master branch).
+
+
+2013-05-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [eaaa0ffba5183f80fb9b021a9b8f7f0be49b92c5]
+
+	Add getters for column widths and row heights.
+
+
+2013-05-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2647d1ad9126249b09d239f14164158767dc95e6]
+
+	Return the real column and row sizes.
+
+
+2013-05-05  Kohei Yoshida  <kohei.yoshida@gmail.com>  [14aa0909edab7505cdc3fdf1179ee9a562847054]
+
+	Build tree for column width and row height containers at the end.
+
+
+2013-05-04  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e69f33a4abd360c459550785c09f560b7ed63c8d]
+
+	Convert row heights and column widths to twips on import.
+
+
+2013-05-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [59f75039672165d205475ff14b896e2359e166f7]
+
+	Add methods to set column widths and row heights. Not used yet.
+
+
+2013-05-02  Kohei Yoshida  <kohei.yoshida@gmail.com>  [40c5f632a9d67053e943370a3c4323d29e29a2d4]
+
+	Some comments.
+
+
+2013-05-02  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [669598c2378873cdd76bba501b00dfcd428af3e0]
+
+	activate the missing two tests
+
+
+2013-05-02  Markus Mohrhard  <markus.mohrhard@googlemail.com>  [c8ac4f888455fdfe2fe06c8300af0da5f4388b24]
+
+	this should be an equality check
+
+
+2013-05-02  Fridrich Štrba  <fridrich.strba@bluewin.ch>  [11f559cb7de6ab84cbb33ec1cbf3075ca2a8581b]
+
+	Sanitize a bit.
+
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [59a72df2cd50c9da62441925f407a0b88999361f]
+
+	In ptr_map::insert(), the 1st arg must be non-const reference.
+
+	when the 2nd argument is a raw pointer.  There is also a variant that
+	takes a const ref as the 1st arg and a auto_ptr wrapped pointer as the
+	2nd arg.
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [3ffce11e638ef2a3f1cbcb1faa0fb4b1329e0b9b]
+
+	Remove warning.
+
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [61625786a4cb510330903ee751603365e11043bc]
+
+	comment
+
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b9db29da1ab2d8448618b97e07baa161c37b3b09]
+
+	Pass row heights to sheet properties as well.
+
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d8ce5e4fe3b57ff687b4fb0b76b91c36bd30c6dd]
+
+	Pass column widths to the sheet properties interface.
+
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [aa5ae47e1aef51cdf8c379729a0ab8ed86082a5f]
+
+	A littl cleanup.
+
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [cf1440d4ea48744167af133ea722b97b86c5dfa4]
+
+	Implement sheet_properties to import & store column widths and row heights.
+
+	For now it's just an empty implementation.
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6920d14eb8fc3bb81732025af15ffce9f2a408bb]
+
+	New import interface to import column widths and row heights.
+
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [06ed5c944cfb8883563d44c29812d5af7f48daed]
+
+	A bit better printout of style data.
+
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [577728cfa443bd93a4868d690ee0b2115ab2cd78]
+
+	Initialize data with NULL pointer.
+
+
+2013-05-01  Kohei Yoshida  <kohei.yoshida@gmail.com>  [17d0402e80d69fad9df4e49723c06ad396a7eeea]
+
+	Print styles picked up at the end of the automatic-styles context.
+
+
+2013-04-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c919260e29f2d77e94a6f4eff108666792e30286]
+
+	Insert some asserts (just to be sure...)
+
+
+2013-04-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6d43aa139123caadbe617edee4e0cdd59ec09ca1]
+
+	Pick up column widths and row heights as I parse automatics-styles.
+
+
+2013-04-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [94b7f645f21f6ff7fd03613e461b3492bacd4c37]
+
+	Add odf_style struct. Still pretty much empty & not even used.
+
+
+2013-04-30  Kohei Yoshida  <kohei.yoshida@gmail.com>  [423adb86d57683b1cf9ac0410d8a420c0a339734]
+
+	Test document for import of column widths and row height values.
+
+
+2013-04-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [80bf4ea23cd5dd9beae2c7ff81a65c062b3d6de5]
+
+	Simple stream handler needs to have its own element handlers.
+
+	To prevent the only context from being popped from the stack.
+
+2013-04-29  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e87a267c556f299a7d714143a051181968cc3cf7]
+
+	Fix for werror.
+
+
+2013-04-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [05f3048c9ffeb560b33da560de882444da47e409]
+
+	Make ixion's model_context accessor public.
+
+
+2013-04-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [9e39d0ed1311bc1c47a8aa0bc05256b0fce38324]
+
+	Require libixion-0.8.
+
+
+2013-04-28  Kohei Yoshida  <kohei.yoshida@gmail.com>  [15d8931f07cef9ec7420fa00bb2b2dad14aa89a3]
+
+	Fix this whitespace error.
+
+
+2013-04-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [36bfc73bb7a3df1c84f6b84c08ac0006163c00ca]
+
+	Add method clear() to document.
+
+
+2013-04-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [f165610acb8f21d660425d89848e591052943a7d]
+
+	Typo.
+
+
+2013-04-27  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d5df9acef4257a6ceedc35d65b477c93d1bf34d4]
+
+	Move the spreadsheet headers to public place.
+
+
+2013-04-26  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e7830fe7c57fbc8eb31c113cdcc2f3c94103fc56]
+
+	Use mdds's pkg-config file to detect it. Much simpler this way.
+
+
+2013-04-24  Tomas Chvatal  <tchvatal@suse.cz>  [6d6aeb7d11057b5df774f1425bb49837f13c80c2]
+
+	Better to use AC_CONFIG_HEADERS here.
+
+
+2013-04-24  Tomas Chvatal  <tchvatal@suse.cz>  [fb81582e3a0366620306efba93741437c049d67c]
+
+	liborcus-parser needs to link to boost.
+
+
+2013-04-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [025430a1cf765c9f66e0c352a2d0c0c0fbd9cf22]
+
+	Convert column widths and row heights in ods styles parsing.
+
+
+2013-04-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [e350451ddfcb0da0e1a2256f9170cee12bd96ada]
+
+	Add to_double function to convert string to double.
+
+	In the future we'll be using this in lieu of stdtod, which is very
+	slow on Windows.
+
+2013-04-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0d423f1dedc33969fe6fccff501ce72540be6a07]
+
+	Test for 'cm' parsing & fix the decimals handling in the test code.
+
+
+2013-04-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [969ad1c22c7aaad124b0bcab7acd729abf2c7901]
+
+	Test for parsing 'in' for inches.
+
+
+2013-04-21  Kohei Yoshida  <kohei.yoshida@gmail.com>  [7cc9bbc8881c0335c87c427f8d089a7236bc667a]
+
+	Manually convert numeric string into a double.
+
+
+2013-04-20  Kohei Yoshida  <kohei.yoshida@gmail.com>  [a34c43e9820743d9201de22ceebf096e03bdd04c]
+
+	Just use boost::unordered_map for this, to keep it simple.
+
+
+2013-04-17  Kohei Yoshida  <kohei.yoshida@gmail.com>  [273694f4d9a567b9c86a57781021b7701cc0bf08]
+
+	Function to convert style family textural value into an enum.
+
+	But I should probably turn this into a more generalized function.
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [fa31d5502a0b731fa2998c71d66d4e6c3b7a17eb]
+
+	More on parsing automatic styles context.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [edc4de335634933c7f4bf6b253d8acce178ec0a8]
+
+	ORCUS_ header guard prefix.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ca726bad0f052c87da27d58a4061119f2e1c5913]
+
+	Minor formatting oddity.
+
+	Auto-generated from SlickEdit. Apparently the compiler parses it fine...
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [ceab79d45e5e671f640ef72ade50de82e83811bf]
+
+	Skeleton implementation for handling automatic styles in ods.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6618de4dd6792972eddd2db1de3bd13cf0645854]
+
+	New test file with custom column widths and row heights applied.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [021854d0abdc80d70f33cc902e57d7515574f5fc]
+
+	Make it a concrete data member.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [aff7bfc51499355d50760626a38ea36be02350ce]
+
+	Re-use the same para_text_context instance, for better efficiency.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [43453d70e923e6fcf415f201bf97ae04d8d4f6df]
+
+	Move the context stack handling part up to xml_stream_handler.
+
+	It was just a bunch of copy-n-pasted block code blocks.
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [126348551dff4e1e0a54ce71947b9840fe9a8b52]
+
+	Fix memory leak in orcus-gnumeric.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [5bea4103aace7ba24bfbec9a5c5d00858ec3743d]
+
+	Have immediate parent context manage the life cycle of its own child contexts.
+
+	The top level context handler now only deletes the root xml context instance.
+	Each individual context class is now responsible for managing the life cycles
+	of its own child contexts that it returns.
+
+	With this, a context can re-use the same instance repeatedly as a child
+	context instead of creating each child context on the heap.
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6c495a08fba6d28027ea18c5d4b59b1c08433078]
+
+	Fix memory leak.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [2bfc90e09d8734de6bc8fce4935646454f106241]
+
+	Disable this.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [c25a006ed2f7f226f515d66150c44f3eca1a63f8]
+
+	Get liborcus-spreadsheet-model to build when --enable-static.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [8d59bf1321aa7ccca6cdb8cad95265657192aae7]
+
+	Add --without-tools configure to skip building of binary tools.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [20cf0da0e4dce431c4705e043c9a11a046117048]
+
+	Keep it consistent in configure.ac & test files updated.
+
+
+2013-04-16  Kohei Yoshida  <kohei.yoshida@gmail.com>  [d09d7b61b28dcd18495ec8e7cc9a8c2dc3030baf]
+
+	Add documentation on how xlsx and ods handle column widths and row heights.
+
+
+2013-04-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [84175ac8aa8e52577dfaf0bd9ed6e1f7b7ddb3b1]
+
+	Up the version to 0.7.0 and the API version to 0.8.
+
+	pstring's exported symbols have changed due to the removal of static
+	intern methods.
+
+2013-04-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [0647853c30ac3c54201a0d0fb4e0cfcef1954945]
+
+	No more global pstring intern pool, to make orcus filters re-entrant.
+
+	Now, each orcus_* class stores string_pool instance, and the document
+	has its own string pool.
+
+2013-04-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [6c6e4a9b95e7464ed8dafb97b98efbad2f112821]
+
+	Add session_context which stores data shared in each import session.
+
+
+2013-04-14  Kohei Yoshida  <kohei.yoshida@gmail.com>  [b38bfa1c511da7d98c1a79dfbe41d86dc1e714e8]
+
+	We don't need to do this.
+
+
 2013-04-12  Kohei Yoshida  <kohei.yoshida@gmail.com>  [363241399191418d057c036cfcc1b11cb2cde677]
 
 	Up the version to 0.5.1 since I need to release a newer version.
